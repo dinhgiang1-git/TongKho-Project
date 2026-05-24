@@ -1,0 +1,51 @@
+.shadow-block {
+  box-shadow:
+    rgba(14, 63, 126, 0.06) 0px 0px 0px 1px,
+    rgba(42, 51, 70, 0.03) 0px 1px 1px -0.5px,
+    rgba(42, 51, 70, 0.04) 0px 2px 2px -1px,
+    rgba(42, 51, 70, 0.04) 0px 3px 3px -1.5px,
+    rgba(42, 51, 70, 0.03) 0px 5px 5px -2.5px,
+    rgba(42, 51, 70, 0.03) 0px 10px 10px -5px,
+    rgba(42, 51, 70, 0.03) 0px 24px 24px -8px;
+}
+
+.gradient-1 {
+  background: rgb(71, 63, 198);
+  background: linear-gradient(
+    90deg,
+    rgba(71, 63, 198, 1) 0%,
+    rgba(106, 106, 195, 1) 0%,
+    rgba(114, 72, 158, 1) 0%,
+    rgba(103, 93, 201, 1) 64%
+  );
+}
+.gradient-2 {
+  background: rgb(2, 0, 36);
+  background: linear-gradient(
+    90deg,
+    rgba(2, 0, 36, 1) 0%,
+    rgba(106, 106, 195, 1) 0%,
+    rgba(107, 80, 203, 1) 0%,
+    rgba(184, 117, 103, 1) 100%
+  );
+}
+.gradient-3 {
+  background: rgb(71, 63, 198);
+  background: linear-gradient(
+    90deg,
+    rgba(71, 63, 198, 1) 0%,
+    rgba(106, 106, 195, 1) 0%,
+    rgba(114, 72, 158, 1) 0%,
+    rgba(103, 93, 201, 1) 64%
+  );
+}
+.gradient-4 {
+  background: rgb(71, 63, 198);
+  background: linear-gradient(
+    90deg,
+    rgba(71, 63, 198, 1) 0%,
+    rgba(106, 106, 195, 1) 0%,
+    rgba(114, 72, 158, 1) 0%,
+    rgba(67, 52, 206, 1) 98%
+  );
+}
