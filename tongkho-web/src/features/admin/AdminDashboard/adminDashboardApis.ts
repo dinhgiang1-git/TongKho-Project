@@ -7,6 +7,7 @@ export interface IQuery {
 export interface ITopProductsFilter {
   year: number
   month: number
+  limit?: number
 }
 
 export const adminDashboardServices = {

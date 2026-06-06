@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { ShoppingBag, ClipboardList } from 'lucide-react'
+import LocalStorage from 'apis/localStorage'
 
 // Simple confetti particle
 const Particle = ({ delay, x, color }: { delay: number; x: number; color: string }) => (
@@ -20,6 +21,7 @@ const COLORS = ['#3b82f6', '#06b6d4', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6'
 function OrderSuccess() {
   const navigate = useNavigate()
   const [particles, setParticles] = useState<{ id: number; x: number; color: string; delay: number }[]>([])
+  const isAuthenticated = !!LocalStorage.getToken()
 
   useEffect(() => {
     const list = Array.from({ length: 60 }, (_, i) => ({
@@ -122,16 +124,18 @@ function OrderSuccess() {
           transition={{ delay: 0.8, duration: 0.5 }}
           className='flex flex-col sm:flex-row gap-3 w-full'
         >
-          <motion.button
-            whileHover={{ scale: 1.03, y: -2 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigate(USER_PATH.ORDER_HISTORY)}
-            className='flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 shadow-lg'
-            style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}
-          >
-            <ClipboardList className='w-4 h-4' />
-            Xem đơn hàng
-          </motion.button>
+          {isAuthenticated && (
+            <motion.button
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate(USER_PATH.ORDER_HISTORY)}
+              className='flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 shadow-lg'
+              style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}
+            >
+              <ClipboardList className='w-4 h-4' />
+              Xem đơn hàng
+            </motion.button>
+          )}
 
           <motion.button
             whileHover={{ scale: 1.03, y: -2 }}

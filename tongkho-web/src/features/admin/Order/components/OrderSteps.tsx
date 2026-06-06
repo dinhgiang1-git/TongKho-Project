@@ -7,7 +7,8 @@ interface IStep {
 
 const OrderStep = ({ step }: IStep) => (
   <Steps
-    current={step}
+    current={Math.min(Math.max(step - 1, 0), 3)}
+    status={step === 5 ? 'error' : step === 4 ? 'finish' : 'process'}
     items={[
       {
         title: 'Chờ xác nhận',
@@ -18,7 +19,7 @@ const OrderStep = ({ step }: IStep) => (
         icon: step === 2 ? <LoadingOutlined /> : step > 1 ? undefined : undefined
       },
       {
-        title: 'Đang vận chuyển',
+        title: 'Đang giao hàng',
         icon: step === 3 ? <LoadingOutlined /> : step > 2 ? undefined : undefined
       },
       {

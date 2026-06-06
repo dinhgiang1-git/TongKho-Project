@@ -42,8 +42,14 @@ AxiosClient.interceptors.response.use(
   },
   (error) => {
     console.log('🚀 ~ error:', error)
-    if (error.status === 403) {
-      window.location.href = `${ADMIN_PATH.LOGIN}`
+    const status = error.response?.status || error.status
+    if (status === 401 || status === 403) {
+      const role = LocalStorage.getRole()
+      if (role === 'ADMIN' || role === 'STAFF') {
+        window.location.href = '/ad-login'
+      } else {
+        window.location.href = '/login'
+      }
       openNotificationError(error)
       LocalStorage.removeToken()
     }

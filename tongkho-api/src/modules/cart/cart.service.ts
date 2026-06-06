@@ -13,7 +13,7 @@ export class CartService {
 	) {}
 
 	async create(createCartDto: CreateCartDto, req: any) {
-		const { product_id, product_number, size } = createCartDto;
+		const { product_id, product_number } = createCartDto;
 		const customerId = req?.user?.id;
 
 		const foundProduct = await this.productRepository.findByPk(product_id);
@@ -33,7 +33,6 @@ export class CartService {
 		}
 
 		const cart = await this.cartRepository.create({
-			size,
 			customer_id: customerId,
 			product_id: product_id,
 			product_number: product_number,
@@ -60,7 +59,7 @@ export class CartService {
 	}
 
 	async update(id: number, updateCartDto: UpdateCartDto) {
-		const { product_number, size } = updateCartDto;
+		const { product_number } = updateCartDto;
 
 		const foundCart = await this.cartRepository.findOne({
 			where: { id: id },
@@ -87,7 +86,6 @@ export class CartService {
 		}
 
 		foundCart.product_number = nextProductNumber;
-		foundCart.size = size ?? foundCart.size;
 
 		if (nextProductNumber > foundProduct.quantity) {
 			throw new BadRequestException("Số lượng sản phẩm không đủ!");

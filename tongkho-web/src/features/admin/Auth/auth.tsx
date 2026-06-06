@@ -78,7 +78,7 @@ function LoginAdminPage() {
                     }
                   ]}
                 >
-                  <Input placeholder='Mật khẩu của bạn...' className='h-12' />
+                  <Input.Password placeholder='Mật khẩu của bạn...' className='h-12' />
                 </Form.Item>
                 <Form.Item>
                   <Button className='bg-[black] hover:bg-hover mt-5 w-full p-5' type='primary' htmlType='submit'>

@@ -11,11 +11,4 @@ export enum PayTypes {
 	NOT_PAID = "notpay",
 }
 
-export enum SizeTypes {
-	S = "s",
-	M = "m",
-	L = "l",
-	XL = "xl",
-	XXL = "2xl",
-	XXXL = "3xl",
-}
+

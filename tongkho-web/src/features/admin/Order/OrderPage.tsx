@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, EyeOutlined, CloseOutlined } from '@ant-design/icons'
 import { Button, Row, Spin, Tag, Tooltip } from 'antd'
 import { ShowConfirm } from 'common/components/Alert'
 import { TooltipCustom } from 'common/components/tooltip/ToolTipComponent'
@@ -14,6 +14,8 @@ import { useNavigate } from 'react-router'
 import { ADMIN_PATH } from 'common/constants/paths'
 import styled from 'styled-components'
 import IconAntd from 'common/components/iconAntd'
+import { openNotification, openNotificationError } from 'common/utils'
+import { OrderStatus } from './constants/order.constant'
 
 function AdminOrderPage() {
   const [loadingRefresh, setLoadingRefresh] = useState(false)
@@ -38,12 +40,19 @@ function AdminOrderPage() {
       width: 20
     },
     {
+      title: 'Mã đơn',
+      key: 'id',
+      dataIndex: 'id',
+      width: 90,
+      render: (value: number) => <Tag color='default'>#{value}</Tag>
+    },
+    {
       title: 'Họ và tên',
       key: 'name',
       dataIndex: 'name'
     },
     {
-      title: 'Số lượng sản phẩm',
+      title: 'Số loại sản phẩm',
       key: 'order_details',
       dataIndex: 'order_details',
       render: (value: any) => {
@@ -56,11 +65,19 @@ function AdminOrderPage() {
       dataIndex: 'phone'
     },
     {
-      title: 'Trạng thái',
+      title: 'Trạng thái ĐH',
       key: 'order_status',
       dataIndex: 'order_status',
       render: (value: string) => {
         return <Tag color='processing'>{vldOrderStatus(value)}</Tag>
+      }
+    },
+    {
+      title: 'Thanh toán',
+      key: 'pay_type',
+      dataIndex: 'pay_type',
+      render: (value: string) => {
+        return <Tag color={value === 'pay' ? 'success' : 'warning'}>{value === 'pay' ? 'Đã thanh toán' : 'Chưa thanh toán'}</Tag>
       }
     },
     {
@@ -83,29 +100,31 @@ function AdminOrderPage() {
       dataIndex: 'tt',
       render: (value: number, record: any) => {
         return (
-          <div style={{ display: 'flex' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <TooltipCustom
-              title={'Cập nhật'}
+              title={'Xem chi tiết'}
               children={
                 <Button
                   type={'text'}
                   className={'btn-success-text'}
-                  icon={<EditOutlined />}
+                  icon={<EyeOutlined />}
                   onClick={() => handleEditOrder(record)}
                 />
               }
             />
-            <ShowConfirm
-              placement='bottomLeft'
-              // onConfirm={() => handleRemoveAccount(record)}
-              confirmText={'Xóa'}
-              title={'Bạn có chắc chắn muốn xóa?'}
-            >
-              <TooltipCustom
-                title='Xóa'
-                children={<Button type='text' className={'btn-delete-text'} icon={<DeleteOutlined />} />}
-              />
-            </ShowConfirm>
+            {![OrderStatus.PAID, OrderStatus.CANCELED].includes(record.order_status) && (
+              <ShowConfirm
+                placement='bottomLeft'
+                onConfirm={() => handleCancelOrder(record)}
+                confirmText={'Xác nhận hủy'}
+                title={'Bạn có chắc chắn muốn hủy đơn hàng này?'}
+              >
+                <TooltipCustom
+                  title='Hủy đơn hàng'
+                  children={<Button type='text' danger icon={<CloseOutlined />} />}
+                />
+              </ShowConfirm>
+            )}
           </div>
         )
       }
@@ -134,9 +153,27 @@ function AdminOrderPage() {
     }
   }
 
-  const handleEditOrder = useCallback((record: any) => {
-    navigate(`${ADMIN_PATH.UPDATE_ORDER}/${record?.id}`)
-  }, [])
+  const handleEditOrder = useCallback(
+    (record: any) => {
+      navigate(`${ADMIN_PATH.UPDATE_ORDER}/${record?.id}`)
+    },
+    [navigate]
+  )
+
+  const handleCancelOrder = async (record: any) => {
+    try {
+      setIsLoading(true)
+      const res = await orderServices.cancelOrder(record.id)
+      if (res) {
+        openNotification('success', 'Thành công', 'Đã hủy đơn hàng!')
+        handleGetOrders(payload)
+      }
+    } catch (error) {
+      openNotificationError(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleFilterProduct = useCallback(
     (value: any) => {

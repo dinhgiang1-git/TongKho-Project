@@ -120,7 +120,7 @@ function WarehousePage() {
       title: 'Tên sản phẩm',
       dataIndex: 'product',
       key: 'product',
-      render: (value: string) => value.name
+      render: (value: any) => value?.name || 'Sản phẩm không xác định'
     },
     {
       title: 'Số lượng tồn',

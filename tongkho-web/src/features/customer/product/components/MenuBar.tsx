@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 
 const Menu = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(true)
   const [isStyleOpen, setIsStyleOpen] = useState(false)
   const [isProductLineOpen, setIsProductLineOpen] = useState(false)
 
-  const toggleMenu = (menuName) => {
+  const toggleMenu = (menuName: string) => {
     switch (menuName) {
       case 'status':
         setIsStatusOpen(!isStatusOpen)

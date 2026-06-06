@@ -81,7 +81,7 @@ const UploadSingleFile = ({ onSuccessUpload, initialImage, width = '200px', heig
     try {
       const res: any = await AxiosClient.post(`uploads/image`, fmData, config)
       setImageUrl(res?.data?.absoluteUrl)
-      onSuccessUpload(res?.data?.absoluteUrl)
+      onSuccessUpload?.(res?.data?.relativeUrl)
       setLoading(!loading)
     } catch (error) {
       console.log('🚀 ~ handleUpload ~ error:', error)

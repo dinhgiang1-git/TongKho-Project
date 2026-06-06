@@ -76,7 +76,7 @@ function LoginPage() {
               <Package className='w-5 h-5 text-white' />
             </div>
             <div>
-              <div className='text-white font-bold text-lg leading-none'>Tuấn Thịnh</div>
+              <div className='text-white font-bold text-lg leading-none'>Minh Ngọc</div>
               <div className='text-red-300 text-xs leading-none mt-0.5'>Kim Khí</div>
             </div>
           </motion.div>
@@ -131,7 +131,7 @@ function LoginPage() {
           transition={{ delay: 0.9 }}
           className='relative z-10'
         >
-          <p className='text-red-300 text-xs'>© 2025 Kim Khí Tuấn Thịnh. All rights reserved.</p>
+          <p className='text-red-300 text-xs'>© 2025 Kim Khí Minh Ngọc. All rights reserved.</p>
         </motion.div>
       </div>
 
@@ -154,7 +154,7 @@ function LoginPage() {
                   <Package className='w-5 h-5 text-white' />
                 </div>
                 <div>
-                  <div className='font-bold text-lg text-gray-900 leading-none'>Tuấn Thịnh</div>
+                  <div className='font-bold text-lg text-gray-900 leading-none'>Minh Ngọc</div>
                   <div className='text-red-500 text-xs leading-none mt-0.5'>Kim Khí</div>
                 </div>
               </div>

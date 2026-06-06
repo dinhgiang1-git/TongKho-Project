@@ -11,6 +11,7 @@ import { PageDto } from "src/common/dto/page.dto";
 import { ProductReviewModel } from "../product-review/model/product-review.model";
 import { UserModel } from "../user/model/user.model";
 import { SupplierModel } from "../supplier/model/supplier.model";
+import { ProductStatus } from "./constants/product.constant";
 
 @Injectable()
 export class ProductService {
@@ -18,11 +19,26 @@ export class ProductService {
 		@InjectModel(ProductModel) private readonly productRepository: typeof ProductModel,
 		@InjectModel(ProductPhotoModel) private productPhotoModel: typeof ProductModel,
 		@InjectModel(CategoryModel) private categoryRepository: typeof CategoryModel,
-	) { }
+	) {}
+
+	private async syncAllWarehouseManagedProductQuantities() {
+		await this.productRepository.sequelize.query(`
+			UPDATE product p
+			JOIN (
+				SELECT product_id, COALESCE(SUM(quantity), 0) AS total_quantity
+				FROM product_warehouse
+				WHERE deleted_at IS NULL
+				GROUP BY product_id
+			) pw ON pw.product_id = p.id
+			SET p.quantity = pw.total_quantity
+			WHERE p.deleted_at IS NULL
+		`);
+	}
 
 	async findAll(dto: SearchProductDto) {
-		const { product_type, q, status, from_date, to_date, brand, price_range } = dto;
-		const whereOptions: WhereOptions = {};
+		await this.syncAllWarehouseManagedProductQuantities();
+		const { product_type, q, from_date, to_date, brand, price_range } = dto;
+		const whereOptions: WhereOptions = { status: ProductStatus.ACTIVE };
 		const dateConditions = [];
 		const priceRangeConditions = [];
 
@@ -32,10 +48,6 @@ export class ProductService {
 
 		if (product_type) {
 			whereOptions.product_type = { [Op.eq]: product_type };
-		}
-
-		if (status !== undefined) {
-			whereOptions.status = { [Op.eq]: status };
 		}
 
 		if (brand) {
@@ -73,8 +85,9 @@ export class ProductService {
 	}
 
 	async findOne(id: number) {
+		await this.syncAllWarehouseManagedProductQuantities();
 		const product = await this.productRepository.findOne({
-			where: { id: id },
+			where: { id: id, status: ProductStatus.ACTIVE },
 			include: [
 				{ model: ProductPhotoModel },
 				{ model: CategoryModel },
@@ -95,9 +108,17 @@ export class ProductService {
 	}
 
 	async findBestSeller() {
+		await this.syncAllWarehouseManagedProductQuantities();
 		const products = await this.productRepository.findAll({
+			where: {
+				status: ProductStatus.ACTIVE,
+			},
+			include: [{ model: CategoryModel }, { model: SupplierModel }],
+			order: [
+				["sold", "DESC"],
+				["created_at", "DESC"],
+			],
 			limit: 4,
-			offset: 1,
 		});
 
 		return products;

@@ -2,10 +2,9 @@ import { Button, Col, Form, Input, Row } from 'antd'
 import UploadSingleFile from 'common/components/upload/UploadComponent'
 import Config from 'common/constants/config'
 import { TEXT_CONSTANTS } from 'common/constants/constants'
-
 import RadiusSelection from 'common/components/select/RadiusSelection'
 import { IAccount } from '../Customer.props'
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { customerServices } from '../CustomerApis'
 import { openNotification } from 'common/utils'
 
@@ -18,20 +17,13 @@ interface IAddEditAccount {
 export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount) => {
   console.log('🚀 ~ EditCustomer ~ rowSelected:', rowSelected)
   const [form] = Form.useForm()
-  const [status, setStatus] = useState<string>('')
-  console.log('🚀 ~ EditCustomer ~ status:', status)
 
-  const handleUpdateCustomer = useCallback(async (id: string, data: any) => {
-    try {
-      const res = await customerServices.updateCustomer(id, data)
-      if (res) {
-        openNotification('success', 'Thành công', 'Cập nhật thành công!')
-        onClose?.()
-      }
-    } catch (error) {
-      console.log('🚀 ~ handleUpdateCustomer ~ error:', error)
+  const getInitialStatus = () => {
+    if (rowSelected?.textStatus === 'Đang hoạt động' || rowSelected?.textStatus === 'Hoạt động') {
+      return 'active'
     }
-  }, [])
+    return 'inactive'
+  }
 
   const initialvalue = {
     id: rowSelected?.id,
@@ -40,9 +32,26 @@ export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount
     email: rowSelected?.email,
     password: rowSelected?.password,
     avatar: rowSelected?.avatar,
-    status: rowSelected?.textStatus
+    status: getInitialStatus()
   }
-  console.log('🚀 ~ EditCustomer ~ initialvalue:', initialvalue)
+
+  const onFinishForm = async (values: any) => {
+    try {
+      const res = await customerServices.updateCustomer(String(rowSelected?.id), {
+        name: values.name,
+        phone: values.phone,
+        email: values.email,
+        status: values.status,
+        avatar: values.avatar
+      })
+      if (res) {
+        openNotification('success', 'Thành công', 'Cập nhật thành công!')
+        onClose?.()
+      }
+    } catch (error) {
+      console.log('🚀 ~ onFinishForm ~ error:', error)
+    }
+  }
 
   return (
     <Form
@@ -50,7 +59,7 @@ export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount
       initialValues={initialvalue}
       name='addEditCustomer'
       labelAlign='left'
-      onFinish={onFinish}
+      onFinish={onFinishForm}
       scrollToFirstError
       layout='vertical'
     >
@@ -66,7 +75,7 @@ export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount
               }
             ]}
           >
-            <Input readOnly />
+            <Input />
           </Form.Item>
         </Col>
         <Col span={12}>
@@ -86,7 +95,7 @@ export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount
               }
             ]}
           >
-            <Input readOnly />
+            <Input />
           </Form.Item>
         </Col>
       </Row>
@@ -106,7 +115,7 @@ export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount
               }
             ]}
           >
-            <Input readOnly />
+            <Input />
           </Form.Item>
         </Col>
         {!rowSelected && (
@@ -132,7 +141,7 @@ export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount
         {rowSelected && (
           <Col span={12}>
             <Form.Item
-              label=' Trạng thái'
+              label='Trạng thái hoạt động'
               name='status'
               rules={[
                 {
@@ -142,14 +151,12 @@ export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount
               ]}
             >
               <RadiusSelection
-                onChange={(value) => {
-                  setStatus(value)
-                }}
                 options={[
-                  { value: 'active', text: 'Hoạt động' },
+                  { value: 'active', text: 'Đang hoạt động' },
                   { value: 'inactive', text: 'Ngừng hoạt động' }
                 ]}
-                placeholder='Trạng thái'
+                placeholder='Chọn trạng thái hoạt động'
+                allowClear={false}
               />
             </Form.Item>
           </Col>
@@ -170,17 +177,14 @@ export const EditCustomer = ({ onFinish, onClose, rowSelected }: IAddEditAccount
 
       <Row gutter={24}>
         <Col span={12}> </Col>
-        <Col span={12} className='flex items-center justify-end'>
+        <Col span={12} className='flex items-center justify-end gap-2.5'>
           <Button danger onClick={onClose}>
             Thoát
           </Button>
           <Button
-            onClick={() => {
-              handleUpdateCustomer(String(initialvalue.id), { status })
-            }}
             htmlType='submit'
+            type='primary'
             className='btn-confirm'
-            style={{ marginLeft: '10px' }}
           >
             Xác nhận
           </Button>

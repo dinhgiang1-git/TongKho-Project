@@ -9,7 +9,7 @@ export const cartServices = {
     const url = '/cart'
     return AxiosClient.delete(`${url}/${cartId}`)
   },
-  update: (cartId: string, payload: any) => {
+  update: (cartId: number, payload: any) => {
     const url = '/cart'
     return AxiosClient.put(`${url}/${cartId}`, { ...payload })
   }

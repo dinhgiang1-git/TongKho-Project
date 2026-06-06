@@ -61,6 +61,13 @@ export const orderServices = {
     const url = `/order`
     return AxiosClient.get(url, { ...payload })
   },
+  downloadInvoice: (id: number, phone?: string) => {
+    const url = `/order/${id}/invoice`
+    return AxiosClient.get(url, {
+      params: { phone },
+      responseType: 'blob'
+    }) as Promise<Blob>
+  },
   cancelOrder: (id: number) => {
     const url = `/order/cancel/${id}`
     return AxiosClient.patch(url)

@@ -8,7 +8,7 @@ export interface IPayLoadLisCategory {
   page?: number
   take?: number
   q?: string
-  status?: number
+  status?: number | null
   from_date?: string
   to_date?: string
 }

@@ -68,7 +68,7 @@ function RegisterPage() {
             <Package className='w-5 h-5 text-white' />
           </div>
           <div>
-            <div className='text-white font-bold text-lg leading-none'>Tuấn Thịnh</div>
+            <div className='text-white font-bold text-lg leading-none'>Minh Ngọc</div>
             <div className='text-red-300 text-xs leading-none mt-0.5'>Kim Khí</div>
           </div>
         </motion.div>
@@ -121,7 +121,7 @@ function RegisterPage() {
           transition={{ delay: 1.0 }}
           className='relative z-10 text-red-300 text-xs'
         >
-          © 2025 Kim Khí Tuấn Thịnh. All rights reserved.
+          © 2025 Kim Khí Minh Ngọc. All rights reserved.
         </motion.p>
       </div>
 
@@ -144,7 +144,7 @@ function RegisterPage() {
                   <Package className='w-5 h-5 text-white' />
                 </div>
                 <div>
-                  <div className='font-bold text-lg text-gray-900 leading-none'>Tuấn Thịnh</div>
+                  <div className='font-bold text-lg text-gray-900 leading-none'>Minh Ngọc</div>
                   <div className='text-red-500 text-xs leading-none mt-0.5'>Kim Khí</div>
                 </div>
               </div>

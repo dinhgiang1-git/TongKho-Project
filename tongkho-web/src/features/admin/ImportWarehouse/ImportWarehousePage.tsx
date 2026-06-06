@@ -1,10 +1,19 @@
-import { Button, Modal, Table, message } from 'antd'
+import { Button, Modal, Select, Table, Tag, message } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { IImportWarehouse, IPayLoadListImportWarehouse } from './ImportWarehouse.props'
 import { importWarehouseServices } from './ImportWarehouseApis'
 import { ImportWarehouseForm } from './components/ImportWarehouseForm'
 import dayjs from 'dayjs'
+
+const IMPORT_STATUS_OPTIONS = [
+  { label: 'Đang xử lý', value: 'processing', color: 'gold' },
+  { label: 'Hoàn thành', value: 'completed', color: 'green' },
+  { label: 'Đã hủy', value: 'canceled', color: 'red' }
+]
+
+const getImportStatus = (status?: string) =>
+  IMPORT_STATUS_OPTIONS.find((item) => item.value === status) || IMPORT_STATUS_OPTIONS[0]
 
 export const ImportWarehousePage = () => {
   const [payload, setPayload] = useState<IPayLoadListImportWarehouse>({
@@ -50,15 +59,21 @@ export const ImportWarehousePage = () => {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (value: string) => (
-        <span className={`${value === 'completed' ? 'text-green-500' : 'text-yellow-500'}`}>
-          {value === 'completed' ? 'Hoàn thành' : 'Đang xử lý'}
-        </span>
+      render: (value: string, record: IImportWarehouse) => (
+        <Select
+          className='min-w-[150px]'
+          value={value || 'processing'}
+          options={IMPORT_STATUS_OPTIONS.map((item) => ({
+            label: <Tag color={item.color}>{item.label}</Tag>,
+            value: item.value
+          }))}
+          onChange={(status) => handleUpdateStatus(record.id, status)}
+        />
       )
     }
   ]
 
-  const handleGetListImportWarehouse = async () => {
+  const handleGetListImportWarehouse = useCallback(async () => {
     setLoading(true)
     try {
       const res = await importWarehouseServices.get(payload)
@@ -70,11 +85,11 @@ export const ImportWarehousePage = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [payload])
 
   useEffect(() => {
     handleGetListImportWarehouse()
-  }, [payload.page, payload.limit])
+  }, [handleGetListImportWarehouse])
 
   const handleSubmit = async (value: any) => {
     try {
@@ -85,6 +100,19 @@ export const ImportWarehousePage = () => {
     } catch (error) {
       console.log('🚀 ~ handleSubmit ~ error:', error)
       message.error('Nhập kho thất bại')
+    }
+  }
+
+  const handleUpdateStatus = async (id: number, status: string) => {
+    const statusOption = getImportStatus(status)
+
+    try {
+      await importWarehouseServices.updateStatus(id, status)
+      message.success(`Đã cập nhật trạng thái: ${statusOption.label}`)
+      handleGetListImportWarehouse()
+    } catch (error) {
+      console.log('🚀 ~ handleUpdateStatus ~ error:', error)
+      message.error('Cập nhật trạng thái thất bại')
     }
   }
 

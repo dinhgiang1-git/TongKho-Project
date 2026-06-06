@@ -5,6 +5,7 @@ import { diskStorage } from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { imageFileFilter, videoFileFilter } from "../../common/filters/file.filter";
 import { GenericController } from "src/common/decorators/controller.decorator";
+import { getFullUrl } from "src/common/helpers/ultils";
 
 @GenericController("uploads")
 export class UploadController {
@@ -24,7 +25,7 @@ export class UploadController {
 	)
 	public uploadImage(@UploadedFile() image: Express.Multer.File) {
 		const relativeUrl = `uploads/image${image.filename}`;
-		const absoluteUrl = `${process.env.API_BASE_URL}/${relativeUrl}`;
+		const absoluteUrl = getFullUrl(relativeUrl);
 
 		const data = {
 			absoluteUrl,
@@ -53,7 +54,7 @@ export class UploadController {
 	public uploadMultipleImages(@UploadedFiles() images: Express.Multer.File[]) {
 		const uploadedImages = images.map(image => {
 			const relativeUrl = `uploads/image${image.filename}`;
-			const absoluteUrl = `${process.env.API_BASE_URL}/api/v1/${relativeUrl}`;
+			const absoluteUrl = getFullUrl(relativeUrl);
 
 			return {
 				absoluteUrl,

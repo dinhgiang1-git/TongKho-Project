@@ -6,9 +6,15 @@ import { Button, Col, Image, Row, Card, Typography, Tag, Spin, Divider, Space } 
 import { Fragment, useEffect, useState } from 'react'
 import { useParams } from 'react-router'
 import { orderServices } from '../OrderApis'
-import { formatPrice, getDataSource, openNotificationError } from 'common/utils'
+import { formatPrice, getDataSource, openNotificationError, vldOrderStatus } from 'common/utils'
 import { OrderStatus } from '../constants/order.constant'
-import { UserOutlined, PhoneOutlined, EnvironmentOutlined, ShoppingCartOutlined } from '@ant-design/icons'
+import {
+  UserOutlined,
+  PhoneOutlined,
+  EnvironmentOutlined,
+  ShoppingCartOutlined,
+  DownloadOutlined
+} from '@ant-design/icons'
 
 const { Title, Text } = Typography
 
@@ -30,6 +36,8 @@ function OrderDetail() {
         return 'info'
       case OrderStatus.PAID:
         return 'success'
+      case OrderStatus.CANCELED:
+        return 'error'
       default:
         return 'default'
     }
@@ -89,7 +97,7 @@ function OrderDetail() {
       case OrderStatus.WAITING_FOR_PAYMENT:
         return 'Hoàn thành'
       default:
-        return 'Đang xử lý'
+        return ''
     }
   }
 
@@ -98,6 +106,23 @@ function OrderDetail() {
       setLoading(true)
       await orderServices.nextStep(id)
       handleGetOrder()
+    } catch (error) {
+      openNotificationError(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDownloadInvoice = async () => {
+    try {
+      setLoading(true)
+      const invoiceBlob = await orderServices.downloadInvoice(id)
+      const url = window.URL.createObjectURL(new Blob([invoiceBlob], { type: 'application/pdf' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `hoa-don-${id}.pdf`
+      link.click()
+      window.URL.revokeObjectURL(url)
     } catch (error) {
       openNotificationError(error)
     } finally {
@@ -189,17 +214,41 @@ function OrderDetail() {
                 </div>
 
                 <div className='flex justify-between items-center'>
-                  <Text strong>Trạng thái:</Text>
-                  <Tag color={getStatusColor(order_status)}>{getButtonText(order_status)}</Tag>
+                  <Text strong>Phương thức thanh toán:</Text>
+                  <Text>
+                    {order.payment_method === 'VNPAY' ? 'VNPay' : 'Thanh toán khi nhận hàng (COD)'}
+                  </Text>
                 </div>
 
-                {order_status !== OrderStatus.PAID && (
-                  <div className='flex justify-end mt-4'>
+                <div className='flex justify-between items-center'>
+                  <Text strong>Trạng thái thanh toán:</Text>
+                  <Tag color={order.pay_type === 'pay' ? 'success' : 'warning'}>
+                    {order.pay_type === 'pay' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                  </Tag>
+                </div>
+
+                {order.vnp_transaction_no && (
+                  <div className='flex justify-between items-center'>
+                    <Text strong>Mã giao dịch VNPay:</Text>
+                    <Text>{order.vnp_transaction_no}</Text>
+                  </div>
+                )}
+
+                <div className='flex justify-between items-center'>
+                  <Text strong>Trạng thái đơn hàng:</Text>
+                  <Tag color={getStatusColor(order_status)}>{vldOrderStatus(order_status)}</Tag>
+                </div>
+
+                <div className='flex justify-end gap-2 mt-4'>
+                  <Button size='large' icon={<DownloadOutlined />} onClick={handleDownloadInvoice} loading={loading}>
+                    Xuất hóa đơn
+                  </Button>
+                  {![OrderStatus.PAID, OrderStatus.CANCELED].includes(order_status) && (
                     <Button type='primary' size='large' onClick={handleNextStep} loading={loading}>
                       {getButtonText(order_status)}
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </Space>
             </Card>
           </Col>

@@ -16,19 +16,20 @@ import { vldOrderStatus } from "src/common/helpers/ultils";
 import { format } from "date-fns";
 import * as moment from "moment";
 import { WarehouseService } from "src/modules/warehouse/warehouse.service";
+import { buildInvoicePdf } from "../invoice-pdf.helper";
 
 @Injectable()
 export class OrderAdminService {
-	private readonly EXCEL_FILE_PATH = 'uploads/excels';
+	private readonly EXCEL_FILE_PATH = "uploads/excels";
 	private readonly DEFAULT_INCLUDE = [
-		{ 
-			model: OrderDetailModel, 
-			include: [{ model: ProductModel }] 
+		{
+			model: OrderDetailModel,
+			include: [{ model: ProductModel }],
 		},
-		{ 
-			model: UserModel, 
-			attributes: ["name", "phone", "email", "role"] 
-		}
+		{
+			model: UserModel,
+			attributes: ["name", "phone", "email", "role"],
+		},
 	];
 
 	constructor(
@@ -43,15 +44,23 @@ export class OrderAdminService {
 		const dateConditions = [];
 
 		if (q) {
-			whereOptions.id = {
-				[Op.in]: [
-					Sequelize.literal(
-						`select o.id from \`order\` as o
-						join user on o.customer_id = user.id
-						where user.name like '%${q}%'`
-					),
-				],
-			};
+			(whereOptions as any)[Op.or] = [
+				{ name: { [Op.like]: `%${q}%` } },
+				{ phone: { [Op.like]: `%${q}%` } },
+				{
+					id: {
+						[Op.in]: [
+							Sequelize.literal(
+								`select o.id from \`order\` as o
+								join user on o.customer_id = user.id
+								where user.name like '%${q}%'
+								or user.phone like '%${q}%'
+								or user.email like '%${q}%'`,
+							),
+						],
+					},
+				},
+			];
 		}
 
 		if (order_status) {
@@ -59,14 +68,14 @@ export class OrderAdminService {
 		}
 
 		if (from_date) {
-			dateConditions.push({ 
-				[Op.gte]: moment(from_date).startOf("date").toDate() 
+			dateConditions.push({
+				[Op.gte]: moment(from_date).startOf("date").toDate(),
 			});
 		}
-		
+
 		if (to_date) {
-			dateConditions.push({ 
-				[Op.lte]: moment(to_date).endOf("date").toDate() 
+			dateConditions.push({
+				[Op.lte]: moment(to_date).endOf("date").toDate(),
 			});
 		}
 
@@ -98,21 +107,23 @@ export class OrderAdminService {
 		});
 
 		return new PageDto(
-			orders.rows, 
-			new PageMetaDto({ 
-				itemCount: orders.count, 
-				pageOptionsDto: dto 
-			})
+			orders.rows,
+			new PageMetaDto({
+				itemCount: orders.count,
+				pageOptionsDto: dto,
+			}),
 		);
 	}
 
 	async findOne(id: number) {
 		const order = await this.orderRp.findOne({
 			where: { id },
-			include: [{ 
-				model: OrderDetailModel, 
-				include: [{ model: ProductModel }] 
-			}],
+			include: [
+				{
+					model: OrderDetailModel,
+					include: [{ model: ProductModel }],
+				},
+			],
 		});
 
 		if (!order) {
@@ -120,6 +131,11 @@ export class OrderAdminService {
 		}
 
 		return order;
+	}
+
+	async generateInvoicePdf(id: number) {
+		const order = await this.findOne(id);
+		return buildInvoicePdf(order);
 	}
 
 	async update(id: number, dto: UpdateOrderDto) {
@@ -135,7 +151,11 @@ export class OrderAdminService {
 				throw new NotFoundException("Đơn hàng không tồn tại!");
 			}
 
-			if (order.order_status === OrderType.CANCELED && dto.order_status && dto.order_status !== OrderType.CANCELED) {
+			if (
+				order.order_status === OrderType.CANCELED &&
+				dto.order_status &&
+				dto.order_status !== OrderType.CANCELED
+			) {
 				throw new BadRequestException("Không thể chuyển trạng thái đơn hàng đã hủy!");
 			}
 
@@ -144,6 +164,7 @@ export class OrderAdminService {
 					order.order_details.map(item => ({
 						product_id: item.product_id,
 						quantity: item.product_number,
+						warehouse_deductions: item.warehouse_deductions,
 					})),
 					transaction,
 				);
@@ -191,14 +212,12 @@ export class OrderAdminService {
 				order.order_details.map(item => ({
 					product_id: item.product_id,
 					quantity: item.product_number,
+					warehouse_deductions: item.warehouse_deductions,
 				})),
 				transaction,
 			);
 
-			await this.orderRp.update(
-				{ order_status: OrderType.CANCELED },
-				{ where: { id }, transaction }
-			);
+			await this.orderRp.update({ order_status: OrderType.CANCELED }, { where: { id }, transaction });
 		});
 	}
 
@@ -211,12 +230,9 @@ export class OrderAdminService {
 			throw new BadRequestException("Đơn hàng đã hoàn thành!");
 		}
 
-		await this.orderRp.update(
-			{ order_status: newStatus },
-			{ where: { id } }
-		);
+		await this.orderRp.update({ order_status: String(newStatus) as OrderType }, { where: { id } });
 
-		return newStatus;
+		return this.findOne(id);
 	}
 
 	async exportOrders(dto: SearchOrderAdminDto) {
@@ -255,12 +271,12 @@ export class OrderAdminService {
 
 		while (hasNextData) {
 			const pagedOrders = await this.findAll(dto);
-			
+
 			pagedOrders.data.forEach(order => {
 				worksheet.addRow({
 					index: index++,
-					name: order?.customer?.name,
-					phone: order?.customer?.phone,
+					name: order?.customer?.name || order?.name,
+					phone: order?.customer?.phone || order?.phone,
 					number: order?.order_details.length,
 					created: order?.created_at,
 					status: vldOrderStatus(order.order_status),

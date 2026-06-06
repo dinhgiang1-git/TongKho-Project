@@ -1,11 +1,8 @@
 import { Button, Col, Form, Input, Row } from 'antd'
 import RadiusSelection from 'common/components/select/RadiusSelection'
-import { TEXT_CONSTANTS } from 'common/constants/constants'
+import { CommonStatus, TEXT_CONSTANTS } from 'common/constants/constants'
 import { categoryServices } from 'features/admin/Category/CategoryApis'
 import { useEffect, useState } from 'react'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
 import { ProductTypes } from '../constants/product.constants'
 import UploadSingleFile from 'common/components/upload/UploadComponent'
 import UploadMultipart from 'common/components/upload/UploadMultipartComponent'
@@ -45,7 +42,8 @@ const AddEditProduct = () => {
     image: record?.image,
     description: record?.description,
     introduce: record?.introduce,
-    supplier_id: record?.supplier_id
+    supplier_id: record?.supplier_id,
+    status: record?.status ?? CommonStatus.ACTIVE
   }
 
   useEffect(() => {
@@ -117,7 +115,8 @@ const AddEditProduct = () => {
       product_photo: value?.product_photo,
       introduce: value?.introduce,
       product_code: value?.product_code,
-      supplier_id: value?.supplier_id
+      supplier_id: value?.supplier_id,
+      status: value?.status ?? CommonStatus.ACTIVE
     }
     console.log('🚀 ~ handleSubmit ~ payLoadAccount:', payLoadAccount)
     let res
@@ -246,6 +245,17 @@ const AddEditProduct = () => {
             <RadiusSelection placeholder={'Chọn nhà cung cấp'} options={supplierListOptions} allowClear={true} />
           </Form.Item>
         </Col>
+        <Col md={8}>
+          <Form.Item name={'status'} label={'Trạng thái'}>
+            <RadiusSelection
+              placeholder={'Trạng thái hoạt động'}
+              options={[
+                { value: CommonStatus.ACTIVE, text: 'Đang hoạt động' },
+                { value: CommonStatus.INACTIVE, text: 'Ngừng hoạt động' }
+              ]}
+            />
+          </Form.Item>
+        </Col>
       </Row>
       <Row>
         <Col span={8}>
@@ -275,11 +285,11 @@ const AddEditProduct = () => {
               defaultFileList={images}
               onFileListChange={(images) => {
                 const standardizationImage = images.map((item: any) => {
-                  if (item?.response?.url) {
+                  if (item?.response?.relativeUrl) {
                     return {
                       uid: item?.uid,
                       name: item?.name,
-                      url: item?.response.url
+                      url: item?.response.relativeUrl
                     }
                   }
                   return {

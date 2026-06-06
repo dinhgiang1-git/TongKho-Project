@@ -16,5 +16,9 @@ export const importWarehouseServices = {
     return AxiosClient.post(url, {
       ...payload
     })
+  },
+  updateStatus: (id: number, status: string) => {
+    const url = `/warehouse/import/history/${id}/status`
+    return AxiosClient.patch(url, { status })
   }
 }

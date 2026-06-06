@@ -17,16 +17,16 @@ export const ORDER_TYPE = {
 
 export const ORDER_STATUS = {
   [ORDER_TYPE.PENDING]: {
-    text: 'Chờ phê duyệt'
+    text: 'Chờ xác nhận'
   },
   [ORDER_TYPE.PROCESSING]: {
     text: 'Đang chuẩn bị hàng'
   },
   [ORDER_TYPE.WAITING_FOR_PAYMENT]: {
-    text: 'Đang vận chuyển'
+    text: 'Đang giao hàng'
   },
   [ORDER_TYPE.PAID]: {
-    text: 'Đã giao hàng'
+    text: 'Hoàn thành'
   },
   [ORDER_TYPE.CANCELED]: {
     text: 'Đã hủy'

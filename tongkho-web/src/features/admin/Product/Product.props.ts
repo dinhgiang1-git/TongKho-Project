@@ -11,10 +11,11 @@ export interface IProduct {
   sold?: number
   description: string
   image: string
-  images: string
+  images?: string
   product_photo: []
   introduce: string
   product_code?: string
+  supplier_id?: number
 }
 
 export interface IPayLoadLisCategory {

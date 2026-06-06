@@ -8,6 +8,7 @@ import { USER_PATH } from 'common/constants/paths'
 import Comment from '../comment/Comment'
 import { motion } from 'framer-motion'
 import { ShoppingCart, ChevronRight, Package, CheckCircle2, Home } from 'lucide-react'
+import LocalStorage from 'apis/localStorage'
 
 function DetailProductPage() {
   const [product, setProduct] = useState<any>({})
@@ -20,7 +21,6 @@ function DetailProductPage() {
     brand: null
   })
   const [cartPayload, setCartPayload] = useState<any>({
-    size: 'l',
     product_number: 1,
     product_id: null
   })
@@ -61,17 +61,50 @@ function DetailProductPage() {
       console.log('🚀 ~ handleSetCartPayload ~ error:', error)
     }
   }
-  const handleAddToCart = useCallback(async (payload: any) => {
-    try {
-      const res = await productServices.addToCart(payload)
-      if (res) {
-        openNotification('success', 'Thành công', 'Thêm sản phẩm vào giỏ hàng thành công!')
-        window.dispatchEvent(new Event('cart_updated'))
+  const handleAddToCart = useCallback(
+    async (payload: any) => {
+      try {
+        if (!LocalStorage.getToken()) {
+          const guestCart = LocalStorage.getGuestCart()
+          const productNumber = Number(payload.product_number) || 1
+          const foundIndex = guestCart.findIndex(
+            (item: any) => item.product_id === payload.product_id
+          )
+
+          if (foundIndex >= 0) {
+            const nextProductNumber = guestCart[foundIndex].product_number + productNumber
+            guestCart[foundIndex] = {
+              ...guestCart[foundIndex],
+              product_number: nextProductNumber,
+              total_price: Number(product.price) * nextProductNumber
+            }
+          } else {
+            guestCart.push({
+              id: Date.now(),
+              product_id: payload.product_id,
+              product_number: productNumber,
+              total_price: Number(product.price) * productNumber,
+              product
+            })
+          }
+
+          LocalStorage.setGuestCart(guestCart)
+          openNotification('success', 'Thành công', 'Thêm sản phẩm vào giỏ hàng thành công!')
+          window.dispatchEvent(new Event('cart_updated'))
+          return
+        }
+
+        const res = await productServices.addToCart(payload)
+        if (res) {
+          openNotification('success', 'Thành công', 'Thêm sản phẩm vào giỏ hàng thành công!')
+          window.dispatchEvent(new Event('cart_updated'))
+        }
+      } catch (error) {
+        openNotificationError(error)
       }
-    } catch (error) {
-      openNotificationError(error)
-    }
-  }, [])
+    },
+    [product]
+  )
 
   useEffect(() => {
     getProductById(id)
@@ -200,10 +233,17 @@ function DetailProductPage() {
                   <Package className='w-3.5 h-3.5' />
                   {product?.product_code || '—'}
                 </span>
-                <span className='inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-md'>
-                  <CheckCircle2 className='w-3.5 h-3.5' />
-                  Còn hàng
-                </span>
+                {product.quantity > 0 ? (
+                  <span className='inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-md'>
+                    <CheckCircle2 className='w-3.5 h-3.5' />
+                    Còn hàng
+                  </span>
+                ) : (
+                  <span className='inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-md'>
+                    <Package className='w-3.5 h-3.5' />
+                    Hết hàng
+                  </span>
+                )}
               </div>
 
               {/* Product Name */}
@@ -236,19 +276,22 @@ function DetailProductPage() {
                     <label className='text-xs font-semibold text-gray-500 uppercase tracking-wide'>Số lượng</label>
                     <InputNumber
                       min={1}
-                      max={999}
+                      max={product?.quantity > 0 ? product.quantity : 1}
                       defaultValue={1}
+                      disabled={!product?.quantity || product.quantity <= 0}
                       size='middle'
                       className='w-full !rounded-lg !border-gray-200'
-                      onChange={(value) => handleSetCartPayload('product_number', value)}
+                      onChange={(value) => handleSetCartPayload('product_number', Number(value) || 1)}
                     />
+                    <div className='text-xs text-gray-500 font-medium'>Còn lại: {product?.quantity || 0}</div>
                   </div>
 
                   <motion.button
-                    whileHover={{ scale: 1.02, y: -1 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleAddToCart(cartPayload)}
-                    className='flex-1 mt-auto py-2.5 px-5 rounded-xl bg-primary hover:bg-hover text-white font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg'
+                    whileHover={{ scale: product?.quantity > 0 ? 1.02 : 1, y: product?.quantity > 0 ? -1 : 0 }}
+                    whileTap={{ scale: product?.quantity > 0 ? 0.98 : 1 }}
+                    onClick={() => product?.quantity > 0 && handleAddToCart(cartPayload)}
+                    disabled={!product?.quantity || product.quantity <= 0}
+                    className={`flex-1 mt-auto py-2.5 px-5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-md ${product?.quantity > 0 ? 'bg-primary hover:bg-hover text-white hover:shadow-lg' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                   >
                     <ShoppingCart className='w-4 h-4' />
                     Thêm vào giỏ hàng

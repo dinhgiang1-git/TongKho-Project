@@ -6,6 +6,12 @@ export class UpdateCustomerDto {
 	name?: string;
 
 	@StringFieldOptional()
+	phone?: string;
+
+	@StringFieldOptional()
+	email?: string;
+
+	@StringFieldOptional()
 	avatar?: string;
 
 	@EnumFieldOptional(() => UserStatus)

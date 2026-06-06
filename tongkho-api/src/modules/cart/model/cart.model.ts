@@ -12,7 +12,7 @@ import {
 	UpdatedAt,
 } from "sequelize-typescript";
 import { CustomerModel } from "src/modules/customer/model/customer.model";
-import { SizeTypes } from "src/modules/order/types/order.type";
+
 import { ProductModel } from "src/modules/product/model/product.model";
 import { UserModel } from "src/modules/user/model/user.model";
 
@@ -51,11 +51,7 @@ export class CartModel extends Model {
 	})
 	product_number: number;
 
-	@Column({
-		type: DataType.ENUM(...Object.values(SizeTypes)),
-		defaultValue: SizeTypes.L,
-	})
-	size: SizeTypes;
+
 
 	@Column({
 		type: DataType.BIGINT,

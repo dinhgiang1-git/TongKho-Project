@@ -13,10 +13,25 @@ import { WarehouseModel } from "../warehouse/model/warehouse.model";
 import { ProductWarehouseModel } from "../product-warehouse/model/product-warehouse.model";
 import { WarehouseImportHistoryModel } from "../warehouse/model/warehouse-import-history.model";
 import { SupplierModel } from "../supplier/model/supplier.model";
+import { UserModel } from "../user/model/user.model";
+import { VnpayModule } from "../vnpay/vnpay.module";
 
 @Module({
-	imports: [SequelizeModule.forFeature([OrderModel, OrderDetailModel, ProductModel, CartModel, WarehouseModel, ProductWarehouseModel, WarehouseImportHistoryModel,SupplierModel])],
+	imports: [
+		SequelizeModule.forFeature([
+			OrderModel,
+			OrderDetailModel,
+			ProductModel,
+			CartModel,
+			WarehouseModel,
+			ProductWarehouseModel,
+			WarehouseImportHistoryModel,
+			SupplierModel,
+			UserModel,
+		]),
+		VnpayModule,
+	],
 	controllers: [OrderController, OrderAdminController],
-	providers: [OrderService, OrderAdminService,WarehouseService],
+	providers: [OrderService, OrderAdminService, WarehouseService],
 })
 export class OrderModule {}

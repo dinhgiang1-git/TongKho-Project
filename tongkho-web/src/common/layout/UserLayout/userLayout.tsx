@@ -14,6 +14,7 @@ import PageTransition from 'common/components/PageTransition'
 import { ShoppingCart, Search, Menu, Wrench, ShieldCheck, Truck, MapPin, Mail, Phone, ChevronRight } from 'lucide-react'
 import { Badge } from 'antd'
 import { cartServices } from 'features/customer/cart/cartApis'
+import LocalStorage from 'apis/localStorage'
 
 const { Header, Footer, Content } = Layout
 
@@ -34,7 +35,11 @@ const UserLayout: React.FC = ({ children }: any) => {
 
   const fetchCartCount = async () => {
     try {
-      if (!localStorage.getItem('token')) return
+      if (!LocalStorage.getToken()) {
+        setCartCount(LocalStorage.getGuestCart().length)
+        return
+      }
+
       const res = await cartServices.get()
       if (res && res.data) {
         setCartCount(res.data.length)
@@ -78,7 +83,7 @@ const UserLayout: React.FC = ({ children }: any) => {
   const items: MenuProps['items'] = [
     {
       key: '1',
-      label: <Link to='/order/history'>Đơn hàng</Link>
+      label: <Link to='/order/history'>Lịch sử đặt hàng</Link>
     },
     {
       key: '2',
@@ -108,6 +113,14 @@ const UserLayout: React.FC = ({ children }: any) => {
       )
     }
   ]
+
+  const [searchValue, setSearchValue] = useState('')
+
+  const handleSearch = () => {
+    if (searchValue.trim()) {
+      navigate('/product', { state: { q: searchValue.trim() } })
+    }
+  }
 
   return (
     <Layout style={layoutStyle} className='font-sans'>
@@ -143,7 +156,7 @@ const UserLayout: React.FC = ({ children }: any) => {
               <Wrench className='w-6 h-6' />
             </div>
             <div>
-              <h1 className='text-2xl font-bold text-gray-900 leading-none tracking-tight'>TUẤN THỊNH</h1>
+              <h1 className='text-2xl font-bold text-gray-900 leading-none tracking-tight'>MINH NGỌC</h1>
               <h2 className='text-sm font-bold text-primary leading-none tracking-widest mt-1 uppercase'>Kim Khí</h2>
             </div>
           </div>
@@ -164,7 +177,7 @@ const UserLayout: React.FC = ({ children }: any) => {
             </div>
             <div
               className='cursor-pointer font-bold text-gray-600 transition-all duration-300 hover:text-primary'
-              onClick={() => {}}
+              onClick={() => { }}
             >
               Liên hệ
             </div>
@@ -175,10 +188,15 @@ const UserLayout: React.FC = ({ children }: any) => {
             <div className='hidden sm:flex items-center bg-gray-100 rounded-full px-4 py-2 hover:bg-gray-200 hover:ring-2 hover:ring-primary/20 transition-all cursor-text'>
               <input
                 type='text'
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearch()
+                }}
                 placeholder='Tìm kiếm sản phẩm...'
                 className='bg-transparent border-none outline-none text-sm w-48 font-medium text-gray-700 placeholder-gray-500'
               />
-              <Search className='w-4 h-4 text-gray-500 cursor-pointer hover:text-primary transition-colors' />
+              <Search onClick={handleSearch} className='w-4 h-4 text-gray-500 cursor-pointer hover:text-primary transition-colors' />
             </div>
 
             <div
@@ -327,7 +345,7 @@ const UserLayout: React.FC = ({ children }: any) => {
         </div>
 
         <div className='max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800 text-center text-sm font-medium'>
-          © {new Date().getFullYear()} Tổng Kho Kim Khí. Thiết kế giao diện bởi Antigravity.
+          © {new Date().getFullYear()} Tổng Kho Kim Khí.
         </div>
       </Footer>
       <AccountUser openModal={modalAccountIsvisible} titleModal='Thông tin tài khoản' onClose={handleCloseModal} />

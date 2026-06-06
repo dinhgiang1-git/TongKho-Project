@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Spin, Pagination } from 'antd'
 import { SlArrowDown, SlArrowUp } from 'react-icons/sl'
 import { productServices } from './productApis'
 import CardComponent from 'common/components/cart/Cart'
 import { formatPrice } from 'common/utils'
 import { homeServices } from '../home/homeApis'
-import { PRODUCT_VALUES } from './product.constants.'
 import NodataComponent from 'common/components/Nodata/NoData'
 import { useLocation } from 'react-router'
 
@@ -18,33 +17,31 @@ const productPriceListOptions = [
 ]
 
 function ProductPage() {
-  const [isProductTypesOpen, setIsProductTypesOpen] = useState<boolean>(true)
   const [isProductPriceOpen, setIsPriceOpen] = useState<boolean>(true)
   const [isCategoryOpen, setIsCategoryOpen] = useState<boolean>(true)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [products, setProducts] = useState<any>([])
   const [categories, setCategories] = useState<Array<any>>([])
   const [itemCount, setItemCount] = useState<number>(0)
-  const [categoryId, setCategoryId] = useState<number>(null)
+  const [categoryId, setCategoryId] = useState<number | null>(null)
   const location = useLocation()
   const { state } = location || {}
-  const brand = state?.category_id || {}
+  const brand = state?.category_id || null
+  const searchKeyword = state?.q || ''
   const [payload, setPayload] = useState<any>({
     page: 1,
     take: 20,
-    q: '',
+    q: searchKeyword,
     to_date: '',
     from_date: '',
-    status: null,
     price_range: null,
-    brand: null,
-    product_type: null
+    brand: null
   })
 
   const handleGetProduct = useCallback(async (payload: any) => {
     try {
       setIsLoading(true)
-      const res = await productServices.get(payload)
+      const res = (await productServices.get(payload)) as any
       setItemCount(res.meta.item_count)
       setProducts(res?.data)
       setIsLoading(false)
@@ -63,16 +60,8 @@ function ProductPage() {
     }
   }, [payload])
 
-  const productTypeListOptions = Object.entries(PRODUCT_VALUES).map(([value, { text }]) => ({
-    label: text,
-    value
-  }))
-
   const toggleMenu = (key: string) => {
     switch (key) {
-      case 'status':
-        setIsProductTypesOpen(!isProductTypesOpen)
-        break
       case 'price':
         setIsPriceOpen(!isProductPriceOpen)
         break
@@ -85,13 +74,7 @@ function ProductPage() {
   }
 
   const handleFilterChange = (key: string, value: any) => {
-    if (key === 'product_type') {
-      setPayload((prev: any) => ({
-        ...prev,
-        page: 1,
-        [key]: prev[key] === value ? null : value
-      }))
-    } else if (key === 'price_range') {
+    if (key === 'price_range') {
       setPayload((prev: any) => ({
         ...prev,
         page: 1,
@@ -101,7 +84,7 @@ function ProductPage() {
       setPayload((prev: any) => ({
         ...prev,
         page: 1,
-        brand: prev.brand === value ? null : value
+        brand: value
       }))
     } else if (key === 'page') {
       setPayload((prev: any) => ({
@@ -134,6 +117,16 @@ function ProductPage() {
     window.scrollTo(0, 0)
     setCategoryId(brand)
   }, [])
+
+  useEffect(() => {
+    if (state?.q !== undefined) {
+      setPayload((prev: any) => ({
+        ...prev,
+        q: state.q,
+        page: 1
+      }))
+    }
+  }, [state?.q])
 
   return (
     <div className='bg-gray-50 min-h-screen pt-8 pb-16'>
@@ -183,6 +176,15 @@ function ProductPage() {
                   className={`overflow-hidden transition-all duration-300 ${isCategoryOpen ? 'max-h-96 mt-2' : 'max-h-0'}`}
                 >
                   <ul className='space-y-1'>
+                    <li
+                      className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-all flex items-center gap-2 ${payload.brand === null ? 'bg-red-50 text-red-600 font-semibold shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:text-red-600'}`}
+                      onClick={() => handleFilterChange('brand', null)}
+                    >
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${payload.brand === null ? 'bg-red-600' : 'bg-transparent'}`}
+                      ></div>
+                      Tất cả danh mục
+                    </li>
                     {categories.map((c, index) => {
                       const isActive = payload.brand === c.id
                       return (
@@ -219,8 +221,20 @@ function ProductPage() {
                   className={`overflow-hidden transition-all duration-300 ${isProductPriceOpen ? 'max-h-96 mt-2' : 'max-h-0'}`}
                 >
                   <ul className='space-y-1'>
+                    <li
+                      className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-all flex items-center gap-2 ${payload.price_range === null ? 'bg-red-50 text-red-600 font-semibold shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:text-red-600'}`}
+                      onClick={() => handleFilterChange('price_range', null)}
+                    >
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${payload.price_range === null ? 'bg-red-600' : 'bg-transparent'}`}
+                      ></div>
+                      Tất cả mức giá
+                    </li>
                     {productPriceListOptions.map((p, index) => {
-                      const isActive = payload.price_range === p.range
+                      const isActive =
+                        Array.isArray(payload.price_range) &&
+                        payload.price_range[0] === p.range[0] &&
+                        payload.price_range[1] === p.range[1]
                       return (
                         <li
                           key={index}
@@ -231,42 +245,6 @@ function ProductPage() {
                             className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-red-600' : 'bg-transparent'}`}
                           ></div>
                           {p?.label}
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </div>
-
-              <div className='h-px bg-gray-50 w-full my-4'></div>
-
-              {/* Trạng thái */}
-              <div>
-                <h3
-                  onClick={() => toggleMenu('status')}
-                  className='uppercase cursor-pointer flex items-center justify-between py-2 text-sm font-bold text-gray-700 hover:text-red-600 transition-colors'
-                >
-                  <span>Trạng thái</span>
-                  <span className='text-gray-400'>
-                    {isProductTypesOpen ? <SlArrowUp className='w-3 h-3' /> : <SlArrowDown className='w-3 h-3' />}
-                  </span>
-                </h3>
-                <div
-                  className={`overflow-hidden transition-all duration-300 ${isProductTypesOpen ? 'max-h-96 mt-2' : 'max-h-0'}`}
-                >
-                  <ul className='space-y-1'>
-                    {productTypeListOptions.map((p, index) => {
-                      const isActive = payload.product_type === p.value
-                      return (
-                        <li
-                          key={index}
-                          className={`px-3 py-2 text-sm rounded-lg cursor-pointer transition-all flex items-center gap-2 ${isActive ? 'bg-red-50 text-red-600 font-semibold shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:text-red-600'}`}
-                          onClick={() => handleFilterChange('product_type', p.value)}
-                        >
-                          <div
-                            className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-red-600' : 'bg-transparent'}`}
-                          ></div>
-                          {p.label}
                         </li>
                       )
                     })}

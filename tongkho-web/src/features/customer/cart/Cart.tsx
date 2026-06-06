@@ -7,6 +7,7 @@ import { cartServices } from './cartApis'
 import { useNavigate } from 'react-router'
 import { USER_PATH } from 'common/constants/paths'
 import { Trash2, ShoppingBag, ChevronRight, Home } from 'lucide-react'
+import LocalStorage from 'apis/localStorage'
 
 function CartPage() {
   const navigate = useNavigate()
@@ -17,6 +18,11 @@ function CartPage() {
 
   const handleGetAllCart = useCallback(async () => {
     try {
+      if (!LocalStorage.getToken()) {
+        setCarts(LocalStorage.getGuestCart())
+        return
+      }
+
       const res = await cartServices.get()
       if (res) {
         setCarts(res?.data)
@@ -29,6 +35,15 @@ function CartPage() {
   const handleDeleteCart = useCallback(
     async (cartId: number) => {
       try {
+        if (!LocalStorage.getToken()) {
+          const nextCart = LocalStorage.getGuestCart().filter((item: any) => item.id !== cartId)
+          LocalStorage.setGuestCart(nextCart)
+          setCarts(nextCart)
+          openNotification('success', 'Thành công', 'Xóa sản phẩm trong giỏ hàng thành công!')
+          window.dispatchEvent(new Event('cart_updated'))
+          return
+        }
+
         const res = await cartServices.delete(cartId)
         if (res) {
           openNotification('success', 'Thành công', 'Xóa sản phẩm trong giỏ hàng thành công!')
@@ -48,8 +63,7 @@ function CartPage() {
         const totalAmount = carts.reduce((acc: number, item: any) => {
           const price = Number(item.product?.price) || 0
           const quantity = item.product_number || 0
-          const discount = quantity >= 10 ? 0.2 : 0
-          const itemTotal = price * quantity * (1 - discount)
+          const itemTotal = Math.round(price * quantity)
           return acc + itemTotal
         }, 0)
 
@@ -65,8 +79,17 @@ function CartPage() {
   const handleUpdateQuantity = async (cartId: number, newQuantity: number, productPrice: number) => {
     try {
       const price = Number(productPrice)
-      const discount = newQuantity >= 10 ? 0.2 : 0 // 20% discount for bulk orders
-      const newTotalPrice = price * newQuantity * (1 - discount)
+      const newTotalPrice = Math.round(price * newQuantity)
+
+      if (!LocalStorage.getToken()) {
+        const nextCart = LocalStorage.getGuestCart().map((item: any) =>
+          item.id === cartId ? { ...item, product_number: newQuantity, total_price: newTotalPrice } : item
+        )
+        LocalStorage.setGuestCart(nextCart)
+        setCarts(nextCart)
+        window.dispatchEvent(new Event('cart_updated'))
+        return
+      }
 
       await cartServices.update(cartId, {
         product_number: newQuantity,
@@ -134,11 +157,11 @@ function CartPage() {
                     </div>
                   </div>
 
-                  <div className='flex-1 flex flex-col justify-between py-1'>
+                  <div className='flex-1 flex flex-col justify-between py-1 min-w-0'>
                     <div className='flex justify-between items-start gap-4'>
                       <div>
                         <h2
-                          className='text-lg font-bold text-gray-900 line-clamp-2 cursor-pointer hover:text-primary transition-colors'
+                          className='text-lg font-bold text-gray-900 line-clamp-2 cursor-pointer hover:text-primary transition-colors break-all'
                           onClick={() => navigate(`${USER_PATH.PRODUCT_DETAIL}/${c.product_id}`)}
                         >
                           {c?.product?.name}
@@ -158,40 +181,23 @@ function CartPage() {
                     </div>
 
                     <div className='mt-6 flex flex-wrap items-center gap-6'>
-                      <div className='flex items-center gap-3'>
-                        <span className='text-sm font-bold text-gray-700 uppercase'>Size:</span>
-                        <Select
-                          size='middle'
-                          style={{ width: 80 }}
-                          value={c.size}
-                          className='[&_.ant-select-selector]:!rounded-xl [&_.ant-select-selector]:!border-gray-200'
-                          onChange={async (value: string) => {
-                            await cartServices.update(c.id, { size: value })
-                            handleGetAllCart()
-                          }}
-                          options={[
-                            { value: 's', label: 'S' },
-                            { value: 'm', label: 'M' },
-                            { value: 'l', label: 'L' },
-                            { value: 'xl', label: 'XL' },
-                            { value: '2xl', label: '2XL' }
-                          ]}
-                        />
-                      </div>
-
-                      <div className='flex items-center gap-3'>
-                        <span className='text-sm font-bold text-gray-700 uppercase'>SL:</span>
-                        <InputNumber
-                          min={1}
-                          value={c.product_number}
-                          onChange={async (value: number) => {
-                            if (value && value > 0) {
-                              const price = Number(c.product?.price)
-                              await handleUpdateQuantity(c.id, value, price)
-                            }
-                          }}
-                          className='!rounded-xl !border-gray-200 hover:!border-primary focus:!border-primary !w-20'
-                        />
+                      <div className='flex items-start gap-3'>
+                        <span className='text-sm font-bold text-gray-700 uppercase mt-1.5'>SL:</span>
+                        <div className='flex flex-col'>
+                          <InputNumber
+                            min={1}
+                            max={c.product?.quantity || 999}
+                            value={c.product_number}
+                            onChange={async (value) => {
+                              if (value && Number(value) > 0) {
+                                const price = Number(c.product?.price)
+                                await handleUpdateQuantity(c.id, Number(value), price)
+                              }
+                            }}
+                            className='!rounded-xl !border-gray-200 hover:!border-primary focus:!border-primary !w-20'
+                          />
+                          <div className='text-xs text-gray-500 font-medium mt-1'>Còn lại: {c.product?.quantity || 0}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -200,18 +206,9 @@ function CartPage() {
                     <div className='text-right w-full'>
                       <div className='text-sm font-medium text-gray-500 mb-1'>Thành tiền</div>
                       <div className='text-2xl font-black text-primary'>
-                        {formatPrice(
-                          c.product_number >= 10
-                            ? c.product?.price * c.product_number * (1 - 0.2)
-                            : c.product?.price * c.product_number
-                        )}{' '}
+                        {formatPrice(c.product?.price * c.product_number)}{' '}
                         <span className='text-lg underline decoration-2 underline-offset-4'>đ</span>
                       </div>
-                      {c.product_number >= 10 && (
-                        <div className='mt-2 inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-lg border border-green-200'>
-                          Giảm sỉ 20%
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>

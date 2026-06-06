@@ -1,30 +1,37 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Form, Input, Select } from 'antd'
 import TextArea from 'antd/es/input/TextArea'
-import CustomButton from 'common/components/button/Button'
 import Config from 'common/constants/config'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { orderServices } from './orderApis'
 import { formatPrice, getOptionListSelector, openNotification, openNotificationError } from 'common/utils'
 import { useLocation, useNavigate } from 'react-router'
 import { USER_PATH } from 'common/constants/paths'
-import { ChevronRight, Home, ShieldCheck, MapPin } from 'lucide-react'
+import { ChevronRight, Home, ShieldCheck, MapPin, CreditCard, Banknote } from 'lucide-react'
+import { useSelector } from 'react-redux'
+import LocalStorage from 'apis/localStorage'
+
+const calculateLineTotal = (item: any) => {
+  const price = Number(item.product?.price || item.price) || 0
+  const quantity = Number(item.product_number) || 0
+
+  return Math.round(price * quantity)
+}
 
 function OrderPage() {
   const [form] = Form.useForm()
   const navigate = useNavigate()
+  const currentUser = useSelector((state: any) => state.login.user)
   const [provinces, setProvinces] = useState<Array<any>>([])
   const [districts, setDistricts] = useState<Array<any>>([])
   const [wards, setWards] = useState<Array<any>>([])
   const [province, setProvince] = useState<string>('')
-  const [district, setDistrict] = useState<string>([])
+  const [district, setDistrict] = useState<string>('')
   const [totalPrice, setTotalPrice] = useState(0)
-  const [payload, setPayload] = useState<any>({
-    query: null
-  })
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY'>('COD')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const location = useLocation()
   const { state } = location || {}
-  const listOrders = state?.cart || []
+  const listOrders = useMemo(() => state?.cart || [], [state?.cart])
 
   const listProvince = getOptionListSelector(provinces, 'name', 'id')
   const listDistrict = getOptionListSelector(districts, 'name', 'id')
@@ -32,7 +39,7 @@ function OrderPage() {
 
   const getProvince = useCallback(async () => {
     try {
-      const res = await orderServices.getProvince(payload)
+      const res = await orderServices.getProvince()
 
       console.log('🚀 ~ getProvince ~ res:', res)
       setProvinces(res?.data)
@@ -41,35 +48,29 @@ function OrderPage() {
     }
   }, [])
 
-  const getDistricts = useCallback(
-    async (districtId: string) => {
-      try {
-        const res = await orderServices.getDistrict(districtId)
-        setDistricts(res?.data)
-      } catch (error) {
-        console.log('🚀 ~ getDistricts ~ error:', error)
-      }
-    },
-    [province]
-  )
+  const getDistricts = useCallback(async (districtId: string) => {
+    try {
+      const res = await orderServices.getDistrict(districtId)
+      setDistricts(res?.data)
+    } catch (error) {
+      console.log('🚀 ~ getDistricts ~ error:', error)
+    }
+  }, [])
 
-  const getWards = useCallback(
-    async (wardId: string) => {
-      try {
-        const res = await orderServices.getWards(wardId)
-        setWards(res?.data)
-      } catch (error) {
-        console.log('🚀 ~ getWards ~ error:', error)
-      }
-    },
-    [districts]
-  )
+  const getWards = useCallback(async (wardId: string) => {
+    try {
+      const res = await orderServices.getWards(wardId)
+      setWards(res?.data)
+    } catch (error) {
+      console.log('🚀 ~ getWards ~ error:', error)
+    }
+  }, [])
 
   const handleCalculateTheTotalAmount = useCallback(() => {
     try {
       if (listOrders && listOrders.length) {
         const totalAmount = listOrders.reduce((acc: number, item: any) => {
-          return item.total_price + acc
+          return calculateLineTotal(item) + acc
         }, 0)
 
         setTotalPrice(totalAmount)
@@ -83,32 +84,60 @@ function OrderPage() {
 
   const handleSubmit = async (value: any) => {
     try {
-      const res = await orderServices.createOrder({ ...value, items: listOrders, total_price: totalPrice })
+      setIsSubmitting(true)
+      const items = listOrders.map((item: any) => ({
+        product_id: item.product_id,
+        product_number: item.product_number,
+        cart_id: LocalStorage.getToken() ? item.id : undefined
+      }))
+      const res: any = await orderServices.createOrder({ ...value, items, total_price: totalPrice, payment_method: paymentMethod })
       if (res) {
-        navigate(`${USER_PATH.ORDER_HISTORY}`)
-        openNotification('success', 'Thành công', 'Bạn đã đặt hàng thành công!')
+        if (!LocalStorage.getToken()) {
+          LocalStorage.removeGuestCart()
+        }
         window.dispatchEvent(new Event('cart_updated'))
+
+        // If VNPay, redirect to payment URL
+        if (paymentMethod === 'VNPAY' && res.data?.payment_url) {
+          window.location.href = res.data.payment_url
+          return
+        }
+
+        navigate(`${USER_PATH.ORDER_SUCCESS}`)
+        openNotification('success', 'Thành công', 'Bạn đã đặt hàng thành công!')
       }
     } catch (error) {
       openNotificationError(error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   useEffect(() => {
     getProvince()
-  }, [])
+  }, [getProvince])
 
   useEffect(() => {
     getDistricts(province)
-  }, [province])
+  }, [getDistricts, province])
 
   useEffect(() => {
     getWards(district)
-  }, [district])
+  }, [district, getWards])
 
   useEffect(() => {
     handleCalculateTheTotalAmount()
-  }, [listOrders])
+  }, [handleCalculateTheTotalAmount])
+
+  useEffect(() => {
+    if (!currentUser) return
+
+    form.setFieldsValue({
+      name: currentUser?.name,
+      phone: currentUser?.phone,
+      email: currentUser?.email
+    })
+  }, [currentUser, form])
 
   return (
     <div className='min-h-screen bg-gray-50 pb-20'>
@@ -259,6 +288,59 @@ function OrderPage() {
                   />
                 </Form.Item>
               </div>
+
+              {/* Payment Method Selection */}
+              <div className='mt-8 border-t border-gray-100 pt-6'>
+                <div className='flex items-center gap-2 mb-4 text-xl font-bold text-gray-900'>
+                  <CreditCard className='w-6 h-6 text-primary' />
+                  Phương thức thanh toán
+                </div>
+                <div className='space-y-3'>
+                  <div
+                    onClick={() => setPaymentMethod('COD')}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+                      paymentMethod === 'COD'
+                        ? 'border-primary bg-blue-50/50 shadow-sm'
+                        : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                      paymentMethod === 'COD' ? 'border-primary' : 'border-gray-300'
+                    }`}>
+                      {paymentMethod === 'COD' && <div className='w-2.5 h-2.5 rounded-full bg-primary' />}
+                    </div>
+                    <div className='w-12 h-12 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0'>
+                      <Banknote className='w-6 h-6 text-green-600' />
+                    </div>
+                    <div className='flex-1'>
+                      <div className='font-bold text-gray-900 text-sm'>Thanh toán khi nhận hàng (COD)</div>
+                      <div className='text-xs text-gray-500 mt-0.5'>Thanh toán bằng tiền mặt khi nhận được hàng</div>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setPaymentMethod('VNPAY')}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+                      paymentMethod === 'VNPAY'
+                        ? 'border-primary bg-blue-50/50 shadow-sm'
+                        : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                      paymentMethod === 'VNPAY' ? 'border-primary' : 'border-gray-300'
+                    }`}>
+                      {paymentMethod === 'VNPAY' && <div className='w-2.5 h-2.5 rounded-full bg-primary' />}
+                    </div>
+                    <div className='w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0'>
+                      <CreditCard className='w-6 h-6 text-blue-600' />
+                    </div>
+                    <div className='flex-1'>
+                      <div className='font-bold text-gray-900 text-sm'>Thanh toán qua VNPay</div>
+                      <div className='text-xs text-gray-500 mt-0.5'>ATM / Visa / MasterCard / QR Pay / Ví điện tử</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -276,12 +358,11 @@ function OrderPage() {
                     <div key={idx} className='flex flex-col gap-2 p-3 bg-gray-50 rounded-xl'>
                       <div className='flex justify-between items-start gap-4'>
                         <div className='font-bold text-gray-800 line-clamp-2 leading-tight'>{item?.product.name}</div>
-                        <div className='font-bold text-primary flex-shrink-0'>{formatPrice(item.total_price)} ₫</div>
+                        <div className='font-bold text-primary flex-shrink-0'>
+                          {formatPrice(calculateLineTotal(item))} ₫
+                        </div>
                       </div>
                       <div className='flex justify-between items-center text-sm text-gray-500 font-medium'>
-                        <span className='bg-white px-2 py-0.5 rounded-md border border-gray-200'>
-                          Size: {item.size?.toUpperCase()}
-                        </span>
                         <span>
                           SL: <span className='font-bold text-gray-700'>{item.product_number}</span>
                         </span>
@@ -297,10 +378,7 @@ function OrderPage() {
                   <span>Tạm tính</span>
                   <span className='font-bold text-gray-900'>{formatPrice(totalPrice)} ₫</span>
                 </div>
-                <div className='flex items-center justify-between text-gray-600 font-medium'>
-                  <span>Giảm giá</span>
-                  <span className='font-bold text-green-600'>-0 ₫</span>
-                </div>
+
                 <div className='flex items-center justify-between text-gray-600 font-medium'>
                   <span>Phí vận chuyển</span>
                   <span className='font-bold text-gray-900'>Miễn phí</span>
@@ -321,10 +399,11 @@ function OrderPage() {
 
               <button
                 type='submit'
-                className='w-full bg-primary text-white py-4 px-6 rounded-2xl text-lg font-black uppercase shadow-[0_4px_14px_0_rgba(var(--primary-rgb,37,99,235),0.39)] hover:shadow-[0_6px_20px_rgba(var(--primary-rgb,37,99,235),0.23)] hover:bg-hover hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2'
+                disabled={isSubmitting}
+                className='w-full bg-primary text-white py-4 px-6 rounded-2xl text-lg font-black uppercase shadow-[0_4px_14px_0_rgba(var(--primary-rgb,37,99,235),0.39)] hover:shadow-[0_6px_20px_rgba(var(--primary-rgb,37,99,235),0.23)] hover:bg-hover hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0'
               >
                 <ShieldCheck className='w-5 h-5' />
-                Hoàn tất đặt hàng
+                {isSubmitting ? 'Đang xử lý...' : paymentMethod === 'VNPAY' ? 'Thanh toán qua VNPay' : 'Hoàn tất đặt hàng'}
               </button>
             </div>
           </div>

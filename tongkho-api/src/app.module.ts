@@ -27,6 +27,7 @@ import { ProductReviewModule } from "./modules/product-review/product-review.mod
 import { WarehouseModule } from "./modules/warehouse/warehouse.module";
 import { ProductWarehouseModule } from "./modules/product-warehouse/product-warehouse.module";
 import { SupplierModule } from "./modules/supplier/supplier.module";
+import { VnpayModule } from "./modules/vnpay/vnpay.module";
 
 @Module({
 	imports: [
@@ -76,6 +77,7 @@ import { SupplierModule } from "./modules/supplier/supplier.module";
 		WarehouseModule,
 		ProductWarehouseModule,
 		SupplierModule,
+		VnpayModule,
 	],
 	controllers: [AppController],
 	providers: [AppService],

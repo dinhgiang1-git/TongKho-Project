@@ -71,7 +71,7 @@ function FilterProduct({ onChangeValue }: IFilter) {
         </Col>
         <Col md={8}>
           <RangerPicker
-            onChange={(name: string, value: any) => onChangeValue({ date: value ? value : '' })}
+            onChange={(_name: string, value: any) => onChangeValue({ date: value ? value : '' })}
             name='createDate'
           />
         </Col>

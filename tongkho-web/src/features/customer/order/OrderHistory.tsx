@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Modal } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import './orderHistory.css'
@@ -6,15 +5,37 @@ import { orderServices } from './orderApis'
 import { formatDate, formatPrice, openNotification, openNotificationError, vldOrderStatus } from 'common/utils'
 import { ORDER_TYPE } from 'common/constants/constants'
 import { motion } from 'framer-motion'
-import { Clock, Package, Truck, CheckCircle, XCircle, Home, ChevronRight, ShoppingBag } from 'lucide-react'
+import {
+  Clock,
+  Package,
+  Truck,
+  CheckCircle,
+  XCircle,
+  Home,
+  ChevronRight,
+  ShoppingBag,
+  Download,
+  Eye
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+
+const calculateOrderDetailLineTotal = (orderDetail: any) => {
+  const price = Number(orderDetail.price || orderDetail.product?.price) || 0
+  const quantity = Number(orderDetail.product_number) || 0
+
+  return Math.round(price * quantity)
+}
+
+const normalizeOrderStatus = (status: any) => String(status)
 
 function OrderHistory() {
   const navigate = useNavigate()
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
-  const [payload, setPayload] = useState<any>({})
+  const [payload] = useState<any>({})
   const [orders, setOrders] = useState<Array<any>>([])
   const [orderId, setOrderId] = useState<any>(null)
+  const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
 
   const handleGetOrders = useCallback(async (payload: any) => {
     try {
@@ -40,17 +61,46 @@ function OrderHistory() {
     }
   }
 
+  const handleDownloadInvoice = async (order: any) => {
+    try {
+      const invoiceBlob = await orderServices.downloadInvoice(order.id, order.phone)
+      const url = window.URL.createObjectURL(new Blob([invoiceBlob], { type: 'application/pdf' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `hoa-don-${order.id}.pdf`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      openNotificationError(error)
+    }
+  }
+
   useEffect(() => {
     handleGetOrders(payload)
-  }, [])
+
+    const refetchVisibleOrders = () => {
+      if (document.visibilityState === 'visible') {
+        handleGetOrders(payload)
+      }
+    }
+
+    window.addEventListener('focus', refetchVisibleOrders)
+    document.addEventListener('visibilitychange', refetchVisibleOrders)
+
+    return () => {
+      window.removeEventListener('focus', refetchVisibleOrders)
+      document.removeEventListener('visibilitychange', refetchVisibleOrders)
+    }
+  }, [handleGetOrders, payload])
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case ORDER_TYPE.WAITING_FOR_PAYMENT:
+    switch (normalizeOrderStatus(status)) {
       case ORDER_TYPE.PENDING:
         return <Clock className='w-5 h-5' />
       case ORDER_TYPE.PROCESSING:
         return <Package className='w-5 h-5' />
+      case ORDER_TYPE.WAITING_FOR_PAYMENT:
+        return <Truck className='w-5 h-5' />
       case ORDER_TYPE.PAID:
         return <CheckCircle className='w-5 h-5' />
       case ORDER_TYPE.CANCELED:
@@ -61,12 +111,13 @@ function OrderHistory() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case ORDER_TYPE.WAITING_FOR_PAYMENT:
+    switch (normalizeOrderStatus(status)) {
       case ORDER_TYPE.PENDING:
         return 'text-yellow-600 bg-yellow-50'
       case ORDER_TYPE.PROCESSING:
         return 'text-blue-600 bg-blue-50'
+      case ORDER_TYPE.WAITING_FOR_PAYMENT:
+        return 'text-indigo-600 bg-indigo-50'
       case ORDER_TYPE.PAID:
         return 'text-green-600 bg-green-50'
       case ORDER_TYPE.CANCELED:
@@ -157,9 +208,6 @@ function OrderHistory() {
                               {od.product?.name}
                             </h4>
                             <div className='flex items-center gap-3 mt-2'>
-                              <span className='bg-white px-2 py-1 rounded-lg border border-gray-200 text-xs font-bold text-gray-600'>
-                                Size: {od.size?.toUpperCase() || 'N/A'}
-                              </span>
                               <span className='text-sm font-medium text-gray-500'>
                                 SL: <span className='font-bold text-gray-700'>{od.product_number}</span>
                               </span>
@@ -168,10 +216,10 @@ function OrderHistory() {
                         </div>
                         <div className='text-right sm:text-right flex flex-row sm:flex-col justify-between items-center sm:items-end w-full sm:w-auto mt-4 sm:mt-0'>
                           <p className='text-sm font-medium text-gray-500 sm:mb-1'>
-                            {formatPrice(od.product?.price)} ₫
+                            {formatPrice(od.price || od.product?.price)} ₫
                           </p>
                           <p className='text-lg font-bold text-primary'>
-                            {formatPrice(od.product?.price * od.product_number)} ₫
+                            {formatPrice(calculateOrderDetailLineTotal(od))} ₫
                           </p>
                         </div>
                       </div>
@@ -189,19 +237,36 @@ function OrderHistory() {
                         <span className='text-lg underline decoration-2 underline-offset-4'>đ</span>
                       </span>
                     </div>
-                    {![ORDER_TYPE.WAITING_FOR_PAYMENT, ORDER_TYPE.CANCELED, ORDER_TYPE.PAID].includes(
-                      item.order_status
-                    ) && (
+                    <div className='flex flex-col sm:flex-row gap-3'>
                       <button
                         onClick={() => {
-                          setDeleteModalVisible(true)
-                          setOrderId(item.id)
+                          setSelectedOrder(item)
+                          setDetailModalVisible(true)
                         }}
-                        className='w-full sm:w-auto px-6 py-3 text-sm font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-600 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md'
+                        className='w-full sm:w-auto px-6 py-3 text-sm font-bold text-gray-700 hover:text-primary bg-white hover:bg-gray-100 border border-gray-200 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md inline-flex items-center justify-center gap-2'
                       >
-                        Hủy đơn hàng
+                        <Eye className='w-4 h-4' />
+                        Xem chi tiết
                       </button>
-                    )}
+                      <button
+                        onClick={() => handleDownloadInvoice(item)}
+                        className='w-full sm:w-auto px-6 py-3 text-sm font-bold text-gray-700 hover:text-primary bg-white hover:bg-gray-100 border border-gray-200 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md inline-flex items-center justify-center gap-2'
+                      >
+                        <Download className='w-4 h-4' />
+                        Xuất hóa đơn
+                      </button>
+                      {normalizeOrderStatus(item.order_status) === ORDER_TYPE.PENDING && (
+                        <button
+                          onClick={() => {
+                            setDeleteModalVisible(true)
+                            setOrderId(item.id)
+                          }}
+                          className='w-full sm:w-auto px-6 py-3 text-sm font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-600 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md'
+                        >
+                          Hủy đơn hàng
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -263,6 +328,102 @@ function OrderHistory() {
         <p className='text-base text-gray-600 font-medium mt-2'>
           Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
         </p>
+      </Modal>
+
+      {/* Detail Modal */}
+      <Modal
+        title={
+          <div className='flex items-center space-x-3'>
+            <div className='w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center'>
+              <Eye className='w-6 h-6 text-blue-500' />
+            </div>
+            <span className='text-xl font-black text-gray-900'>Chi tiết đơn hàng #{selectedOrder?.id}</span>
+          </div>
+        }
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        footer={[
+          <button
+            key='close'
+            onClick={() => setDetailModalVisible(false)}
+            className='px-6 py-3 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200'
+          >
+            Đóng
+          </button>
+        ]}
+        centered
+        className='sm:max-w-2xl [&_.ant-modal-content]:!rounded-3xl [&_.ant-modal-content]:!p-6'
+        closeIcon={false}
+      >
+        {selectedOrder && (
+          <div className='mt-6 space-y-6'>
+            <div className='bg-gray-50 rounded-2xl p-5 border border-gray-100'>
+              <h3 className='text-lg font-bold text-gray-900 mb-4 border-b border-gray-200 pb-2'>
+                Thông tin giao hàng
+              </h3>
+              <div className='space-y-3 text-base'>
+                <div className='flex justify-between'>
+                  <span className='text-gray-500 font-medium'>Người nhận:</span>
+                  <span className='font-bold text-gray-900'>{selectedOrder.name}</span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='text-gray-500 font-medium'>Số điện thoại:</span>
+                  <span className='font-bold text-gray-900'>{selectedOrder.phone}</span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='text-gray-500 font-medium'>Địa chỉ:</span>
+                  <span className='font-bold text-gray-900 text-right max-w-xs'>
+                    {[selectedOrder.address, selectedOrder.ward, selectedOrder.district, selectedOrder.city]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </span>
+                </div>
+                {selectedOrder.note && (
+                  <div className='flex justify-between'>
+                    <span className='text-gray-500 font-medium'>Ghi chú:</span>
+                    <span className='font-bold text-gray-900 text-right max-w-xs'>{selectedOrder.note}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className='bg-gray-50 rounded-2xl p-5 border border-gray-100'>
+              <h3 className='text-lg font-bold text-gray-900 mb-4 border-b border-gray-200 pb-2'>
+                Thông tin thanh toán
+              </h3>
+              <div className='space-y-3 text-base'>
+                <div className='flex justify-between'>
+                  <span className='text-gray-500 font-medium'>Tổng tiền hàng:</span>
+                  <span className='font-bold text-gray-900'>{formatPrice(selectedOrder.total_price)} ₫</span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='text-gray-500 font-medium'>Phương thức thanh toán:</span>
+                  <span className='font-bold text-gray-900'>
+                    {selectedOrder.payment_method === 'VNPAY' ? 'VNPay' : 'Thanh toán khi nhận hàng (COD)'}
+                  </span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='text-gray-500 font-medium'>Trạng thái thanh toán:</span>
+                  <span className={`font-bold ${selectedOrder.pay_type === 'pay' ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {selectedOrder.pay_type === 'pay' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                  </span>
+                </div>
+                {selectedOrder.vnp_transaction_no && (
+                  <div className='flex justify-between'>
+                    <span className='text-gray-500 font-medium'>Mã giao dịch VNPay:</span>
+                    <span className='font-bold text-gray-900'>{selectedOrder.vnp_transaction_no}</span>
+                  </div>
+                )}
+                <div className='flex justify-between'>
+                  <span className='text-gray-500 font-medium'>Trạng thái đơn hàng:</span>
+                  <span className={`font-bold ${getStatusColor(selectedOrder.order_status).split(' ')[0]}`}>
+                    {vldOrderStatus(selectedOrder.order_status)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

@@ -22,12 +22,13 @@ function FilterCategory({ onChangeValue }: IFilter) {
       <Col md={7}>
         <RadiusSelection
           placeholder={'Trạng thái hoạt động'}
-          onChange={(value: number) => {
+          onChange={(value: number | undefined) => {
             let tmpValue
-            value === undefined ? (tmpValue = null) : (tmpValue = value)
+            value === undefined || value === 0 ? (tmpValue = null) : (tmpValue = value)
             onChangeValue({ status: tmpValue })
           }}
           options={[
+            { value: 0, text: 'Tất cả' },
             { value: 1, text: 'Đang hoạt động' },
             { value: 2, text: 'Ngừng hoạt động' }
           ]}

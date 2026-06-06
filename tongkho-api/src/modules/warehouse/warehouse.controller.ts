@@ -6,6 +6,7 @@ import { SearchWarehouseDto } from "./dto/search-warehouse.dto";
 import { GenericController } from "src/common/decorators/controller.decorator";
 import { ImportProductDto } from "./dto/import-product.dto";
 import { SearchImportDto } from "./dto/search-import.dto";
+import { UpdateImportStatusDto } from "./dto/update-import-status.dto";
 
 @GenericController("warehouse")
 export class WarehouseController {
@@ -39,6 +40,11 @@ export class WarehouseController {
 	@Post("import")
 	importProducts(@Body() dto: ImportProductDto) {
 		return this.warehouseService.importProducts(dto);
+	}
+
+	@Patch("import/history/:id/status")
+	updateImportStatus(@Param("id") id: string, @Body() dto: UpdateImportStatusDto) {
+		return this.warehouseService.updateImportStatus(+id, dto);
 	}
 
 	@Get("import/history")

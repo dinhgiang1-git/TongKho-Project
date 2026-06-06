@@ -1,5 +1,4 @@
-import { EnumFieldOptional, NumberField } from "src/common/decorators/field.decorator";
-import { SizeTypes } from "src/modules/order/types/order.type";
+import { NumberField } from "src/common/decorators/field.decorator";
 
 export class CreateCartDto {
 	@NumberField()
@@ -7,7 +6,4 @@ export class CreateCartDto {
 
 	@NumberField()
 	product_number: number;
-
-	@EnumFieldOptional(() => SizeTypes)
-	size: SizeTypes;
 }

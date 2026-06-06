@@ -3,37 +3,37 @@ import { Type } from "class-transformer";
 import { ValidateNested, IsArray } from "class-validator";
 
 class ImportProductItemDto {
-    @NumberField()
-    product_id: number;
+	@NumberField()
+	product_id: number;
 
-    @StringField()
-    product_name: string;
+	@StringField()
+	product_name: string;
 
-    @NumberField()
-    quantity: number;
+	@NumberField({ int: true, isPositive: true })
+	quantity: number;
 
-    @StringField()
-    note: string;
+	@StringField()
+	note: string;
 }
 
 export class ImportProductDto {
-    @StringField()
-    staff_name: string;
+	@StringField()
+	staff_name: string;
 
-    @NumberField()
-    warehouse_id: number;
+	@NumberField()
+	warehouse_id: number;
 
-    @DateField()
-    import_date: Date;
+	@DateField()
+	import_date: Date;
 
-    @NumberField()
-    staff_id: number;
+	@NumberField()
+	staff_id: number;
 
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => ImportProductItemDto)
-    products: ImportProductItemDto[];
+	@IsArray()
+	@ValidateNested({ each: true })
+	@Type(() => ImportProductItemDto)
+	products: ImportProductItemDto[];
 
-    @NumberFieldOptional()
-    supplier_id?: number;
-} 
+	@NumberFieldOptional()
+	supplier_id?: number;
+}

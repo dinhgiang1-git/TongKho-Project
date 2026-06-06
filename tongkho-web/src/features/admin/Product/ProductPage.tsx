@@ -1,15 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useCallback, useEffect, useState } from 'react'
 import FilterProduct from './components/FilterProduct'
-import { isNil, values } from 'lodash'
+import { isNil } from 'lodash'
 import { TooltipCustom } from 'common/components/tooltip/ToolTipComponent'
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import { ShowConfirm } from 'common/components/Alert'
-import { Button, Row, Spin, Tag } from 'antd'
+import { Button, Spin, Tag } from 'antd'
 import { Styled } from 'styles/stylesComponent'
 import { IColumnAntD } from 'common/constants/interface'
 import { IProduct } from './Product.props'
-import { getDataSource, openNotification } from 'common/utils'
+import { openNotification } from 'common/utils'
 import { productServices } from './ProductApis'
 import { useNavigate } from 'react-router-dom'
 import { ADMIN_PATH } from 'common/constants/paths'
@@ -25,8 +24,6 @@ function ProductPage() {
   })
   console.log('🚀 ~ ProductPage ~ payload:', payload)
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [title, setTitle] = useState<string>('')
-  const [modalVisible, setModalVisible] = useState<boolean>(false)
   const [products, setProducts] = useState<Array<IProduct>>([])
   const [count, setCount] = useState<number>(12)
   const navigate = useNavigate()
@@ -89,7 +86,7 @@ function ProductPage() {
       title: 'Thao tác',
       key: 'tt',
       dataIndex: 'tt',
-      render: (value: number, record: any) => {
+      render: (_value: number, record: any) => {
         return (
           <div style={{ display: 'flex' }}>
             <TooltipCustom
@@ -122,7 +119,7 @@ function ProductPage() {
 
   const handleGetProducts = async (payload?: any) => {
     try {
-      const res = await productServices.get(payload)
+      const res = (await productServices.get(payload)) as any
       const mapped = (res?.data ?? []).map((item: any, index: number) => ({
         ...item,
         key: item.id,
@@ -213,29 +210,46 @@ function ProductPage() {
   )
 
   const handleNavigateEditProduct = (record: any) => {
-    navigate('/ad-ce-product/', { state: { record: { ...record } } })
+    navigate('/ad-ce-product/', { state: { record: { ...record, status: record.s ?? record.status } } })
   }
 
   const handleNavigateAddProduct = () => {
     navigate(ADMIN_PATH.CREATE_UPDATE_PRODUCT, { state: {} })
   }
   return (
-    <>
-      <FilterProduct onChangeValue={handleFilterProduct} />
-      <Row className='mb-2 flex justify-end mt-2'>
-        <Button type='primary' onClick={handleNavigateAddProduct}>
-          Thêm mới
-        </Button>
-        <Button className='ml-2' type='primary' onClick={() => handleExportProduct(payload)}>
-          Xuất Excel
-        </Button>
-      </Row>
-      <Spin spinning={isLoading}>
+    <div className='space-y-4'>
+      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 border-b pb-4'>
+        <div>
+          <h2 className='text-xl font-bold text-slate-800'>Danh sách sản phẩm</h2>
+          <p className='mt-1 text-xs text-slate-500'>
+            Quản lý kho hàng, thông tin chi tiết và trạng thái của sản phẩm.
+          </p>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Button type='primary' onClick={handleNavigateAddProduct}>
+            Thêm mới
+          </Button>
+          <Button type='default' className='border-slate-300' onClick={() => handleExportProduct(payload)}>
+            Xuất Excel
+          </Button>
+        </div>
+      </div>
+
+      <div className='mb-4'>
+        <FilterProduct onChangeValue={handleFilterProduct} />
+      </div>
+
+      <Spin spinning={isLoading} size='large'>
         <Styled.TableStyle
           bordered
           columns={columnsListCategory}
           dataSource={products}
+          rowKey='id'
+          className='custom-table shadow-sm border border-slate-100 rounded-lg overflow-hidden'
           pagination={{
+            pageSize: payload.take,
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng cộng ${total} sản phẩm`,
             onChange: (page) => {
               setIsLoading(true)
               setTimeout(() => {
@@ -243,13 +257,13 @@ function ProductPage() {
                 setIsLoading(false)
               }, 200)
             },
-            pageSize: payload.take,
             total: count,
             current: payload.page
           }}
+          scroll={{ x: 1000 }}
         />
       </Spin>
-    </>
+    </div>
   )
 }
 

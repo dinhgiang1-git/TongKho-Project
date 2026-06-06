@@ -5,10 +5,32 @@ export function getFullUrl(path?: string): string {
 		return null;
 	}
 
-	if (!path.startsWith("http")) {
-		return `${process.env.API_BASE_URL}/${path}`;
+	const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:3009/api/v1";
+	const normalizedPath = path
+		.replace(/^undefined\/+/, "")
+		.replace(/^null\/+/, "")
+		.replace(/^\/+/, "");
+
+	if (normalizedPath.startsWith("http")) {
+		try {
+			const url = new URL(normalizedPath);
+			const apiUrl = new URL(apiBaseUrl);
+
+			if (url.origin === apiUrl.origin && url.pathname.startsWith("/uploads/")) {
+				return `${apiUrl.origin}/api/v1${url.pathname}`;
+			}
+		} catch {
+			return normalizedPath;
+		}
+
+		return normalizedPath;
 	}
-	return path;
+
+	if (normalizedPath.startsWith("api/v1/")) {
+		return `${apiBaseUrl.replace(/\/api\/v1\/?$/, "")}/${normalizedPath}`;
+	}
+
+	return `${apiBaseUrl.replace(/\/+$/, "")}/${normalizedPath}`;
 }
 
 export function validateHash(password: string | undefined, hash: string | undefined): Promise<boolean> {
@@ -37,16 +59,16 @@ export const ORDER_TYPE = {
 
 export const ORDER_STATUS = {
 	[ORDER_TYPE.PENDING]: {
-		text: "Chờ phê duyệt",
+		text: "Chờ xác nhận",
 	},
 	[ORDER_TYPE.PROCESSING]: {
 		text: "Đang chuẩn bị hàng",
 	},
 	[ORDER_TYPE.WAITING_FOR_PAYMENT]: {
-		text: "Đang vận chuyển",
+		text: "Đang giao hàng",
 	},
 	[ORDER_TYPE.PAID]: {
-		text: "Đã giao hàng",
+		text: "Hoàn thành",
 	},
 	[ORDER_TYPE.CANCELED]: {
 		text: "Đã hủy",

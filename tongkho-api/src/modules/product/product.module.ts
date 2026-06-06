@@ -8,9 +8,12 @@ import { ProductAdminController } from "./admin/product-admin.controller";
 import { ProductAdminService } from "./admin/product-admin.service";
 import { CategoryModel } from "../category/model/category.model";
 import { ProductReviewModel } from "../product-review/model/product-review.model";
+import { ProductWarehouseModel } from "../product-warehouse/model/product-warehouse.model";
 
 @Module({
-	imports: [SequelizeModule.forFeature([ProductModel, ProductPhotoModel, CategoryModel, ProductReviewModel])],
+	imports: [
+		SequelizeModule.forFeature([ProductModel, ProductPhotoModel, CategoryModel, ProductReviewModel, ProductWarehouseModel]),
+	],
 
 	controllers: [ProductController, ProductAdminController],
 	providers: [ProductService, ProductAdminService],

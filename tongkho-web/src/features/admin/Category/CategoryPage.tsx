@@ -1,4 +1,4 @@
-import { Button, Row, Spin } from 'antd'
+import { Button, Spin } from 'antd'
 import FilterCategory from './components/FilterCategory'
 import { useCallback, useEffect, useState } from 'react'
 import { IColumnAntD } from 'common/constants/interface'
@@ -17,7 +17,7 @@ function CategoryPage() {
     page: 1,
     take: 10,
     q: '',
-    status: 1,
+    status: null,
     to_date: '',
     from_date: ''
   })
@@ -102,24 +102,26 @@ function CategoryPage() {
 
   const handleFilter = useCallback(
     (value: any) => {
-      if (value?.status !== null || value?.status !== undefined) {
+      if ('status' in value) {
         setPayload({
           ...payload,
           status: value.status,
           page: 1
         })
       }
-      if (value?.date) {
+      if ('date' in value) {
         setPayload({
           ...payload,
-          from_date: value?.date.split(',')[0],
-          to_date: value?.date.split(',')[1]
+          from_date: value?.date ? value.date.split(',')[0] : '',
+          to_date: value?.date ? value.date.split(',')[1] : '',
+          page: 1
         })
       }
-      if (value?.search) {
+      if ('search' in value) {
         setPayload({
           ...payload,
-          q: value?.search
+          q: value?.search,
+          page: 1
         })
       }
     },
@@ -186,27 +188,36 @@ function CategoryPage() {
   }, [])
 
   return (
-    <>
-      <Row gutter={[15, 6]} className='mb-2'>
+    <div className='space-y-4'>
+      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 border-b pb-4'>
+        <div>
+          <h2 className='text-xl font-bold text-slate-800'>Quản lý danh mục</h2>
+          <p className='mt-1 text-xs text-slate-500'>Quản lý và thiết lập danh mục sản phẩm của hệ thống.</p>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Button
+            type='primary'
+            onClick={() => {
+              setModalVisible(true)
+              setTitle('Thêm mới danh mục')
+            }}
+          >
+            Thêm mới
+          </Button>
+        </div>
+      </div>
+
+      <div className='mb-4'>
         <FilterCategory onChangeValue={handleFilter} />
-      </Row>
-      <Row className='mb-2 flex justify-end'>
-        <Button
-          type='primary'
-          onClick={() => {
-            setModalVisible(true)
-            setTitle('Thêm mới danh mục')
-            // setTextButton('Thêm mới')
-          }}
-        >
-          Thêm mới
-        </Button>
-      </Row>
-      <Spin spinning={isLoading}>
+      </div>
+
+      <Spin spinning={isLoading} size='large'>
         <Styled.TableStyle
           bordered
           columns={columnsListCategory}
           dataSource={categories}
+          rowKey='id'
+          className='custom-table shadow-sm border border-slate-100 rounded-lg overflow-hidden'
           pagination={{
             onChange: (page) => {
               setIsLoading(true)
@@ -217,8 +228,11 @@ function CategoryPage() {
             },
             total: count,
             current: payload.page,
-            pageSize: payload.take
+            pageSize: payload.take,
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng cộng ${total} danh mục`
           }}
+          scroll={{ x: 800 }}
         />
       </Spin>
       <ModalComponent
@@ -228,7 +242,7 @@ function CategoryPage() {
         modalVisible={modalVisible}
         children={<AddEditCategory onFinish={handleSubmit} onClose={handleClose} rowSelected={rowSelected} />}
       />
-    </>
+    </div>
   )
 }
 

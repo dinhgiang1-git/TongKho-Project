@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { WarehouseModel } from "../model/warehouse.model";
 import { CreateWarehouseDto } from "../dto/create-warehouse.dto";
@@ -11,6 +11,7 @@ import { PageMetaDto } from "src/common/dto/page-meta.dto";
 import { Sequelize } from "sequelize-typescript";
 import { ProductModel } from "src/modules/product/model/product.model";
 import { ProductWarehouseModel } from "src/modules/product-warehouse/model/product-warehouse.model";
+import { WarehouseService } from "../warehouse.service";
 
 const modelName = "warehouse";
 
@@ -21,9 +22,16 @@ export class WarehouseAdminService {
         @InjectModel(ProductModel) private readonly productRepository: typeof ProductModel,
         @InjectModel(ProductWarehouseModel) private readonly productWarehouseRepository: typeof ProductWarehouseModel,
         private readonly sequelize: Sequelize,
+        private readonly warehouseService: WarehouseService,
     ) {}
 
     async create(createWarehouseDto: CreateWarehouseDto): Promise<WarehouseModel> {
+        const count = await this.warehouseRepository.count();
+
+        if (count > 0) {
+            throw new BadRequestException("Tạm thời hệ thống chỉ hỗ trợ một nhà kho");
+        }
+
         const { warehouse_code, warehouse_name } = createWarehouseDto;
 
         const [result] = await this.sequelize.query(
@@ -38,8 +46,9 @@ export class WarehouseAdminService {
     }
 
     async findAll(dto: SearchWarehouseDto) {
+        const { warehouse } = await this.warehouseService.reconcileSingleWarehouseInventory();
         const { q, status, from_date, to_date, take, skip } = dto;
-        const whereOptions: WhereOptions = {};
+        const whereOptions: WhereOptions = { id: warehouse.id };
         const dateConditions = [];
 
         if (status !== undefined) {
@@ -108,6 +117,12 @@ export class WarehouseAdminService {
     }
 
     async findOne(id: number) {
+        const primaryWarehouse = await this.warehouseService.getPrimaryWarehouse();
+
+        if (id !== primaryWarehouse.id) {
+            throw new NotFoundException("Tạm thời hệ thống chỉ sử dụng kho chính");
+        }
+
         const warehouse = await this.sequelize.query(`select * from ${modelName} where id = :id`, {
             replacements: { id },
             type: QueryTypes.SELECT,
@@ -122,6 +137,12 @@ export class WarehouseAdminService {
 
     async update(id: number, updateWarehouseDto: UpdateWarehouseDto): Promise<void> {
         const { warehouse_code, warehouse_name, total_warehouse_area, status } = updateWarehouseDto;
+        const primaryWarehouse = await this.warehouseService.getPrimaryWarehouse();
+
+        if (id !== primaryWarehouse.id) {
+            throw new NotFoundException("Tạm thời hệ thống chỉ sử dụng kho chính");
+        }
+
         const foundWarehouse = await this.warehouseRepository.findOne({
             where: { id },
         });
@@ -144,10 +165,7 @@ export class WarehouseAdminService {
     }
 
     async remove(id: number) {
-        const warehouse = await this.findOne(id);
-        await this.warehouseRepository.destroy({
-            where: { id },
-        });
-        return { message: "Xóa kho thành công" };
+        await this.findOne(id);
+        throw new BadRequestException("Không thể xóa kho chính khi hệ thống đang ở chế độ một nhà kho");
     }
 } 

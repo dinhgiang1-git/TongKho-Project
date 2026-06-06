@@ -8,6 +8,7 @@ const AdminLayout = lazy(() => import('../common/layout/AdminLayout/adminLayout.
 //Admin
 const AdminLogin = lazy(() => import('../features/admin/Auth/auth.tsx'))
 const AdminDashBoard = lazy(() => import('../features/admin/AdminDashboard/adminDashboard.tsx'))
+const ReportPage = lazy(() => import('../features/admin/Report/ReportPage.tsx'))
 const ManagerPage = lazy(() => import('../features/admin/Manager/ManagerPage.tsx'))
 const CustomerPage = lazy(() => import('../features/admin/Customer/CustomerPage.tsx'))
 const CategoryPage = lazy(() => import('../features/admin/Category/CategoryPage.tsx'))
@@ -33,6 +34,7 @@ const OrderSuccess = lazy(() => import('../features/customer/successOrder/Succes
 const OrderHistory = lazy(() => import('../features/customer/order/OrderHistory.tsx'))
 const BlogPage = lazy(() => import('../features/customer/blog/BlogPage.tsx'))
 const BlogDetail = lazy(() => import('../features/customer/blog/BlogDetail.tsx'))
+const VnpayReturn = lazy(() => import('../features/customer/order/VnpayReturn.tsx'))
 
 interface RouterProps {
   path: string
@@ -45,6 +47,11 @@ export const adminRoutes: Array<RouterProps> = [
   {
     path: ADMIN_PATH.OVERVIEW,
     component: AdminDashBoard,
+    layout: AdminLayout
+  },
+  {
+    path: ADMIN_PATH.REPORT,
+    component: ReportPage,
     layout: AdminLayout
   },
   {
@@ -114,10 +121,6 @@ export const userRoutes: Array<RouterProps> = [
     path: USER_PATH.CART,
     component: AdminLogin,
     layout: UserLayout
-  },
-  {
-    path: USER_PATH.ORDER_SUCCESS,
-    component: OrderSuccess
   }
 ]
 
@@ -160,6 +163,11 @@ export const publicRoutes: Array<RouterProps> = [
     layout: UserLayout
   },
   {
+    path: USER_PATH.ORDER_SUCCESS,
+    component: OrderSuccess,
+    layout: UserLayout
+  },
+  {
     path: USER_PATH.ORDER_HISTORY,
     component: OrderHistory,
     layout: UserLayout
@@ -172,6 +180,11 @@ export const publicRoutes: Array<RouterProps> = [
   {
     path: USER_PATH.BLOG + '/:id',
     component: BlogDetail,
+    layout: UserLayout
+  },
+  {
+    path: USER_PATH.VNPAY_RETURN,
+    component: VnpayReturn,
     layout: UserLayout
   }
 ]

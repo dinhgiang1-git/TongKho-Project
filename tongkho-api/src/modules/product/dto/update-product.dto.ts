@@ -1,11 +1,11 @@
 import {
-	BooleanFieldOptional,
 	EnumFieldOptional,
 	NumberFieldOptional,
 	StringField,
 	StringFieldOptional,
 } from "src/common/decorators/field.decorator";
 import { ProductTypes } from "../types/product.type";
+import { ProductStatus } from "../constants/product.constant";
 import { IsArray, IsOptional } from "class-validator";
 import { CreateProductPhotoDto } from "src/modules/product-photo/dto/create-product-photo.dto";
 import { ApiProperty } from "@nestjs/swagger";
@@ -23,10 +23,10 @@ export class UpdateProductDto {
 	@EnumFieldOptional(() => ProductTypes)
 	product_type?: ProductTypes;
 
-	@BooleanFieldOptional()
-	status?: boolean;
+	@EnumFieldOptional(() => ProductStatus)
+	status?: ProductStatus;
 
-	@NumberFieldOptional()
+	@NumberFieldOptional({ int: true, minimum: 0 })
 	quantity?: number;
 
 	@IsArray()

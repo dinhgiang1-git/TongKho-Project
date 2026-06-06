@@ -1,6 +1,7 @@
 export const ADMIN_PATH = {
   LOGIN: '/ad-login',
   OVERVIEW: '/admin',
+  REPORT: '/ad-report',
   CUSTOMER: '/ad-customer',
   MANAGER: '/ad-manager',
   CATEGORY: '/ad-category',
@@ -25,5 +26,6 @@ export const USER_PATH = {
   ORDER: '/order',
   ORDER_SUCCESS: '/order/success',
   ORDER_HISTORY: '/order/history',
+  VNPAY_RETURN: '/order/vnpay-return',
   BLOG: '/blog'
 }

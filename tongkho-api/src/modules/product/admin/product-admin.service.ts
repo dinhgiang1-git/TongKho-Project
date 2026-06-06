@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { CreateProductDto } from "../dto/create-product.dto";
 import { UpdateProductDto } from "../dto/update-product.dto";
 import { InjectModel } from "@nestjs/sequelize";
@@ -6,7 +6,7 @@ import { ProductModel } from "../model/product.model";
 import { ProductPhotoModel } from "src/modules/product-photo/model/product-photo.model";
 import { CategoryModel } from "src/modules/category/model/category.model";
 import { SearchProductDto } from "../dto/search-product.dto";
-import { Sequelize, WhereOptions } from "sequelize";
+import { Sequelize, Transaction, WhereOptions } from "sequelize";
 import { Op } from "sequelize";
 import { PageDto } from "src/common/dto/page.dto";
 import { PageMetaDto } from "src/common/dto/page-meta.dto";
@@ -15,6 +15,8 @@ import * as ExcelJS from "exceljs";
 import { format } from "date-fns";
 import { convertStatus } from "src/common/helpers/ultils";
 import { SupplierModel } from "src/modules/supplier/model/supplier.model";
+import { ProductWarehouseModel } from "src/modules/product-warehouse/model/product-warehouse.model";
+import { ProductStatus } from "../constants/product.constant";
 
 @Injectable()
 export class ProductAdminService {
@@ -22,7 +24,46 @@ export class ProductAdminService {
 		@InjectModel(ProductModel) private readonly productRepository: typeof ProductModel,
 		@InjectModel(ProductPhotoModel) private productPhotoModel: typeof ProductModel,
 		@InjectModel(CategoryModel) private categoryRepository: typeof CategoryModel,
+		@InjectModel(ProductWarehouseModel) private productWarehouseRepository: typeof ProductWarehouseModel,
 	) {}
+
+	private async hasWarehouseInventory(productId: number, transaction?: Transaction) {
+		const count = await this.productWarehouseRepository.count({
+			where: { product_id: productId },
+			transaction,
+		});
+
+		return count > 0;
+	}
+
+	private async syncProductQuantityFromWarehouses(productId: number, transaction?: Transaction) {
+		const totalQuantity = await this.productWarehouseRepository.sum("quantity", {
+			where: { product_id: productId },
+			transaction,
+		});
+
+		await this.productRepository.update(
+			{ quantity: Number(totalQuantity || 0) },
+			{
+				where: { id: productId },
+				transaction,
+			},
+		);
+	}
+
+	private async syncAllWarehouseManagedProductQuantities() {
+		await this.productRepository.sequelize.query(`
+			UPDATE product p
+			JOIN (
+				SELECT product_id, COALESCE(SUM(quantity), 0) AS total_quantity
+				FROM product_warehouse
+				WHERE deleted_at IS NULL
+				GROUP BY product_id
+			) pw ON pw.product_id = p.id
+			SET p.quantity = pw.total_quantity
+			WHERE p.deleted_at IS NULL
+		`);
+	}
 
 	generateProductCode() {
 		const now = new Date();
@@ -33,8 +74,23 @@ export class ProductAdminService {
 	}
 
 	async create(createProductDto: CreateProductDto) {
-		const { name, category_id, price, product_type, quantity, product_photo, description, image, introduce, supplier_id } =
-			createProductDto;
+		const {
+			name,
+			category_id,
+			price,
+			product_type,
+			quantity,
+			product_photo,
+			description,
+			image,
+			introduce,
+			supplier_id,
+			status = ProductStatus.ACTIVE,
+		} = createProductDto;
+
+		if (quantity !== undefined && (!Number.isInteger(quantity) || quantity < 0)) {
+			throw new BadRequestException("Số lượng sản phẩm không được âm");
+		}
 
 		const foundCategory = await this.categoryRepository.findOne({
 			where: { id: category_id },
@@ -57,6 +113,7 @@ export class ProductAdminService {
 					image,
 					introduce,
 					supplier_id,
+					status,
 				},
 				{ transaction },
 			);
@@ -79,6 +136,7 @@ export class ProductAdminService {
 	async findAll(dto: SearchProductDto) {
 		const { product_type, q, status, from_date, to_date, brand, order_price } = dto;
 		console.log("🚀 ~ ProductAdminService ~ findAll ~ order_price:", order_price);
+		await this.syncAllWarehouseManagedProductQuantities();
 		const whereOptions: WhereOptions = {};
 		const dateConditions = [];
 		let orderConditions: [string, "ASC" | "DESC"][] = [["created_at", "DESC"]];
@@ -150,8 +208,12 @@ export class ProductAdminService {
 	}
 
 	async update(productId: number, updateProductDto: UpdateProductDto) {
-		const { product_photo } = updateProductDto;
+		const { product_photo, quantity } = updateProductDto;
 		console.log("🚀 ~ ProductAdminService ~ update ~ product_photo:", product_photo);
+
+		if (quantity !== undefined && (!Number.isInteger(quantity) || quantity < 0)) {
+			throw new BadRequestException("Số lượng sản phẩm không được âm");
+		}
 
 		const foundProduct = await this.productRepository.findOne({
 			where: { id: productId },
@@ -163,9 +225,16 @@ export class ProductAdminService {
 		}
 
 		await this.productRepository.sequelize.transaction(async transaction => {
+			const updatePayload = { ...updateProductDto };
+			const isWarehouseManaged = await this.hasWarehouseInventory(productId, transaction);
+
+			if (isWarehouseManaged) {
+				delete updatePayload.quantity;
+			}
+
 			await this.productRepository.update(
 				{
-					...updateProductDto,
+					...updatePayload,
 				},
 				{
 					where: { id: productId },
@@ -187,6 +256,10 @@ export class ProductAdminService {
 				});
 				await this.productPhotoModel.bulkCreate(payloadProductPhoto, { transaction });
 			}
+
+			if (isWarehouseManaged) {
+				await this.syncProductQuantityFromWarehouses(productId, transaction);
+			}
 		});
 	}
 
@@ -204,6 +277,10 @@ export class ProductAdminService {
 	}
 
 	async import(productId: number, dto: ImportProductDto) {
+		if (!Number.isInteger(dto.quantity) || dto.quantity <= 0) {
+			throw new BadRequestException("Số lượng nhập sản phẩm phải là số nguyên dương");
+		}
+
 		await this.productRepository.sequelize.transaction(async transaction => {
 			const foundProduct = await this.productRepository.findOne({
 				where: { id: productId },
@@ -213,6 +290,12 @@ export class ProductAdminService {
 
 			if (!foundProduct) {
 				throw new NotFoundException("Không tồn tại sản phẩm!");
+			}
+
+			if (await this.hasWarehouseInventory(productId, transaction)) {
+				throw new BadRequestException(
+					"Sản phẩm này đang quản lý tồn theo nhà kho. Vui lòng nhập qua chức năng Nhập hàng.",
+				);
 			}
 
 			await foundProduct.increment("quantity", { by: dto.quantity, transaction });

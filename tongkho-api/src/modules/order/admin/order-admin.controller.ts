@@ -1,4 +1,5 @@
-import { Get, Body, Patch, Param, Delete, Query, Post, Put } from "@nestjs/common";
+import { Get, Body, Patch, Param, Delete, Query, Post, Put, Header, Res } from "@nestjs/common";
+import { Response } from "express";
 import { GenericController } from "src/common/decorators/controller.decorator";
 import { OrderAdminService } from "./order-admin.service";
 import { SearchOrderAdminDto } from "../dto/search-order-admin.dto";
@@ -9,8 +10,20 @@ export class OrderAdminController {
 	constructor(private readonly orderAdminService: OrderAdminService) {}
 
 	@Get()
+	@Header("Cache-Control", "no-store")
 	async findAll(@Query() dto: SearchOrderAdminDto) {
 		return await this.orderAdminService.findAll(dto);
+	}
+
+	@Get(":id/invoice")
+	async exportInvoice(@Param("id") id: string, @Res() res: Response) {
+		const pdfBuffer = await this.orderAdminService.generateInvoicePdf(+id);
+		res.set({
+			"Content-Type": "application/pdf",
+			"Content-Disposition": `attachment; filename="hoa-don-${id}.pdf"`,
+			"Content-Length": pdfBuffer.length,
+		});
+		res.end(pdfBuffer);
 	}
 
 	@Get(":id")

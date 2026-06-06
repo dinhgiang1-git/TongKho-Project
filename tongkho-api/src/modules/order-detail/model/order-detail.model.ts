@@ -11,7 +11,7 @@ import {
 	UpdatedAt,
 } from "sequelize-typescript";
 import { OrderModel } from "src/modules/order/model/order.model";
-import { SizeTypes } from "src/modules/order/types/order.type";
+
 import { ProductModel } from "src/modules/product/model/product.model";
 
 @Table({
@@ -58,10 +58,16 @@ export class OrderDetailModel extends Model {
 	})
 	product_number: number;
 
+
+
 	@Column({
-		type: DataType.ENUM(...Object.values(SizeTypes)),
+		type: DataType.JSON,
 	})
-	size: SizeTypes;
+	warehouse_deductions: Array<{
+		warehouse_id: number;
+		warehouse_name?: string;
+		deducted_quantity: number;
+	}>;
 
 	@CreatedAt
 	created_at: Date;

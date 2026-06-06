@@ -69,7 +69,7 @@ const UploadMultipart: React.FC<UploadMultipartProps> = ({ defaultFileList = [],
     fmData.append('image', file)
     try {
       const res: any = await AxiosClient.post(`uploads/image`, fmData, config)
-      onSuccess({ url: res?.data?.absoluteUrl })
+      onSuccess({ url: res?.data?.absoluteUrl, relativeUrl: res?.data?.relativeUrl })
     } catch (error) {
       openNotificationError(error)
       onError(error)

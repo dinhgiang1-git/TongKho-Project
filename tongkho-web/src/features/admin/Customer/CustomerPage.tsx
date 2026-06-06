@@ -135,22 +135,31 @@ function CustomerPage() {
   }, [])
 
   return (
-    <>
-      <Row gutter={[15, 6]} className='mb-2'>
+    <div className='space-y-4'>
+      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 border-b pb-4'>
+        <div>
+          <h2 className='text-xl font-bold text-slate-800'>Quản lý khách hàng</h2>
+          <p className='mt-1 text-xs text-slate-500'>
+            Tìm kiếm, phân lọc và cập nhật thông tin trạng thái tài khoản khách hàng.
+          </p>
+        </div>
+      </div>
+      
+      <div className='mb-4'>
         <FilterCustomer onChangeValue={handleFilter} />
-      </Row>
-      {/* <Row className='mb-2 flex justify-end'>
-        <Button className='ml-2' type='primary'>
-          Xuất Excel
-        </Button>
-      </Row> */}
-      <Spin spinning={isLoading}>
+      </div>
+
+      <Spin spinning={isLoading} size='large'>
         <Styled.TableStyle
           bordered
           columns={columnsListAccount}
           dataSource={accounts}
+          rowKey='id'
+          className='custom-table shadow-sm border border-slate-100 rounded-lg overflow-hidden'
           pagination={{
             pageSize: payload.take,
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng cộng ${total} khách hàng`,
             onChange: (page) => {
               setIsLoading(true)
               setTimeout(() => {
@@ -161,16 +170,17 @@ function CustomerPage() {
             total: count,
             current: payload.page
           }}
+          scroll={{ x: 800 }}
         />
       </Spin>
       <ModalComponent
         loading={isLoading}
         title='Cập nhật thông tin khách hàng'
-        width={1000}
+        width={800}
         modalVisible={modalVisible}
         children={<EditCustomer onClose={handleSetModalVisible} rowSelected={rowSelected} />}
       />
-    </>
+    </div>
   )
 }
 

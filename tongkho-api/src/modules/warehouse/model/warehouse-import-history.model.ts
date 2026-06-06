@@ -12,6 +12,7 @@ import {
 import { ProductModel } from "src/modules/product/model/product.model";
 import { WarehouseModel } from "./warehouse.model";
 import { SupplierModel } from "src/modules/supplier/model/supplier.model";
+import { WarehouseImportStatus } from "../constants/warehouse-import.constant";
 
 @Table({
     tableName: "warehouse_import_history",
@@ -83,6 +84,13 @@ export class WarehouseImportHistoryModel extends Model {
         allowNull: true,
     })
     note: string;
+
+    @Column({
+        type: DataType.ENUM(...Object.values(WarehouseImportStatus)),
+        allowNull: false,
+        defaultValue: WarehouseImportStatus.PROCESSING,
+    })
+    status: WarehouseImportStatus;
 
     @CreatedAt
     created_at: Date;
