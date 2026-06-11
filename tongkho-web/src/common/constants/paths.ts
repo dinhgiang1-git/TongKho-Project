@@ -14,7 +14,8 @@ export const ADMIN_PATH = {
   UPLOAD: '/upload',
   UPLOADS: '/upload-multipart',
   WAREHOUSE: '/ad-warehouse',
-  IMPORT_WAREHOUSE: '/ad-import-warehouse'
+  IMPORT_WAREHOUSE: '/ad-import-warehouse',
+  EXPORT_WAREHOUSE: '/ad-export-warehouse'
 }
 
 export const USER_PATH = {

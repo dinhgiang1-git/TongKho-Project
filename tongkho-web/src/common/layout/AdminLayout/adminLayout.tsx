@@ -60,6 +60,7 @@ const itemsMenu: MenuItem[] = [
   getItem('Kho hàng', 'sub2', <BankOutlined />, [
     getItem(<Link to={ADMIN_PATH.WAREHOUSE}>Nhà kho</Link>, '7', <HomeOutlined />),
     getItem(<Link to={ADMIN_PATH.IMPORT_WAREHOUSE}>Nhập hàng</Link>, '8', <ImportOutlined />),
+    getItem(<Link to={ADMIN_PATH.EXPORT_WAREHOUSE}>Xuất hàng</Link>, '11', <ExportOutlined />),
     getItem(<Link to={ADMIN_PATH.SUPPLIER}>Nhà cung cấp</Link>, '9', <ExportOutlined />)
   ])
 ]
@@ -70,6 +71,7 @@ const itemsMenuStaff: MenuItem[] = [
   getItem('Kho hàng', 'sub2', <BankOutlined />, [
     getItem(<Link to={ADMIN_PATH.WAREHOUSE}>Nhà kho</Link>, '7', <HomeOutlined />),
     getItem(<Link to={ADMIN_PATH.IMPORT_WAREHOUSE}>Nhập hàng</Link>, '8', <ImportOutlined />),
+    getItem(<Link to={ADMIN_PATH.EXPORT_WAREHOUSE}>Xuất hàng</Link>, '11', <ExportOutlined />),
     getItem(<Link to={ADMIN_PATH.SUPPLIER}>Nhà cung cấp</Link>, '9', <ExportOutlined />)
   ])
 ]
@@ -158,6 +160,10 @@ const AdminLayout: React.FC = ({ children }: any) => {
           setTitleHeader('Nhập hàng')
           setKeySider('8')
           break
+        case ADMIN_PATH.EXPORT_WAREHOUSE:
+          setTitleHeader('Xuất hàng')
+          setKeySider('11')
+          break
         case ADMIN_PATH.SUPPLIER:
           setTitleHeader('Nhà cung cấp')
           setKeySider('9')
@@ -177,7 +183,8 @@ const AdminLayout: React.FC = ({ children }: any) => {
         token: {
           colorPrimary: '#3b82f6',
           borderRadius: 8,
-          fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+          fontFamily:
+            'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
         },
         components: {
           Layout: {

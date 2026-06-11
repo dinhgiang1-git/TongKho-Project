@@ -237,7 +237,7 @@ const AddEditProduct = () => {
         </Col>
         <Col span={8}>
           <Form.Item name='quantity' label='Số lượng'>
-            <Input />
+            <Input disabled={!!record?.id} />
           </Form.Item>
         </Col>
         <Col md={8}>

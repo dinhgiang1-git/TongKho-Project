@@ -54,22 +54,6 @@ export const ImportWarehousePage = () => {
       dataIndex: 'quantity',
       key: 'quantity'
       // render: (value: any[]) => value.length
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (value: string, record: IImportWarehouse) => (
-        <Select
-          className='min-w-[150px]'
-          value={value || 'processing'}
-          options={IMPORT_STATUS_OPTIONS.map((item) => ({
-            label: <Tag color={item.color}>{item.label}</Tag>,
-            value: item.value
-          }))}
-          onChange={(status) => handleUpdateStatus(record.id, status)}
-        />
-      )
     }
   ]
 

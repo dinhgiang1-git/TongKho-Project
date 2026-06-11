@@ -117,13 +117,14 @@ function ProductPage() {
     }
   ]
 
-  const handleGetProducts = async (payload?: any) => {
+  const handleGetProducts = async (reqPayload?: any) => {
+    const currentPayload = reqPayload || payload
     try {
-      const res = (await productServices.get(payload)) as any
+      const res = (await productServices.get(currentPayload)) as any
       const mapped = (res?.data ?? []).map((item: any, index: number) => ({
         ...item,
         key: item.id,
-        STT: index + 1,
+        STT: (currentPayload.page - 1) * currentPayload.take + index + 1,
         status: item.status === 1 ? 'Đang hoạt động' : 'Ngừng hoạt động',
         s: item.status,
         createdAt: item.created_at ? new Date(item.created_at).toLocaleDateString('vi-VN') : '',

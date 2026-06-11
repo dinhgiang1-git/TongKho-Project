@@ -7,6 +7,8 @@ import { GenericController } from "src/common/decorators/controller.decorator";
 import { ImportProductDto } from "./dto/import-product.dto";
 import { SearchImportDto } from "./dto/search-import.dto";
 import { UpdateImportStatusDto } from "./dto/update-import-status.dto";
+import { ExportProductDto } from "./dto/export-product.dto";
+import { SearchExportDto } from "./dto/search-export.dto";
 
 @GenericController("warehouse")
 export class WarehouseController {
@@ -22,6 +24,31 @@ export class WarehouseController {
 		return this.warehouseService.findAll(dto);
 	}
 
+	@Post("import")
+	importProducts(@Body() dto: ImportProductDto) {
+		return this.warehouseService.importProducts(dto);
+	}
+
+	@Post("export")
+	exportProducts(@Body() dto: ExportProductDto) {
+		return this.warehouseService.exportProducts(dto);
+	}
+
+	@Patch("import/history/:id/status")
+	updateImportStatus(@Param("id") id: string, @Body() dto: UpdateImportStatusDto) {
+		return this.warehouseService.updateImportStatus(+id, dto);
+	}
+
+	@Get("import/history")
+	getImportHistory(@Query() dto: SearchImportDto) {
+		return this.warehouseService.getImportHistory(dto);
+	}
+
+	@Get("export/history")
+	getExportHistory(@Query() dto: SearchExportDto) {
+		return this.warehouseService.getExportHistory(dto);
+	}
+
 	@Get(":id")
 	findOne(@Param("id") id: string) {
 		return this.warehouseService.findOne(+id);
@@ -35,20 +62,5 @@ export class WarehouseController {
 	@Delete(":id")
 	remove(@Param("id") id: string) {
 		return this.warehouseService.remove(+id);
-	}
-
-	@Post("import")
-	importProducts(@Body() dto: ImportProductDto) {
-		return this.warehouseService.importProducts(dto);
-	}
-
-	@Patch("import/history/:id/status")
-	updateImportStatus(@Param("id") id: string, @Body() dto: UpdateImportStatusDto) {
-		return this.warehouseService.updateImportStatus(+id, dto);
-	}
-
-	@Get("import/history")
-	getImportHistory(@Query() dto: SearchImportDto) {
-		return this.warehouseService.getImportHistory(dto);
 	}
 }

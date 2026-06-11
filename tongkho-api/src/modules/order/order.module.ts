@@ -12,6 +12,7 @@ import { WarehouseService } from "../warehouse/warehouse.service";
 import { WarehouseModel } from "../warehouse/model/warehouse.model";
 import { ProductWarehouseModel } from "../product-warehouse/model/product-warehouse.model";
 import { WarehouseImportHistoryModel } from "../warehouse/model/warehouse-import-history.model";
+import { WarehouseExportHistoryModel } from "../warehouse/model/warehouse-export-history.model";
 import { SupplierModel } from "../supplier/model/supplier.model";
 import { UserModel } from "../user/model/user.model";
 import { VnpayModule } from "../vnpay/vnpay.module";
@@ -26,6 +27,7 @@ import { VnpayModule } from "../vnpay/vnpay.module";
 			WarehouseModel,
 			ProductWarehouseModel,
 			WarehouseImportHistoryModel,
+			WarehouseExportHistoryModel,
 			SupplierModel,
 			UserModel,
 		]),

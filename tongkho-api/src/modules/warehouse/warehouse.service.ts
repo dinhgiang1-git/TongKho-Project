@@ -16,6 +16,10 @@ import { WarehouseImportHistoryModel } from "./model/warehouse-import-history.mo
 import { SupplierModel } from "src/modules/supplier/model/supplier.model";
 import { UpdateImportStatusDto } from "./dto/update-import-status.dto";
 import { WarehouseImportStatus } from "./constants/warehouse-import.constant";
+import { ExportProductDto } from "./dto/export-product.dto";
+import { SearchExportDto } from "./dto/search-export.dto";
+import { WarehouseExportHistoryModel } from "./model/warehouse-export-history.model";
+import { WarehouseExportStatus } from "./constants/warehouse-export.constant";
 
 interface OrderItem {
 	product_id: number;
@@ -37,6 +41,8 @@ export class WarehouseService {
 		@InjectModel(ProductWarehouseModel) private readonly productWarehouseRepository: typeof ProductWarehouseModel,
 		@InjectModel(WarehouseImportHistoryModel)
 		private readonly importHistoryRepository: typeof WarehouseImportHistoryModel,
+		@InjectModel(WarehouseExportHistoryModel)
+		private readonly exportHistoryRepository: typeof WarehouseExportHistoryModel,
 		@InjectModel(SupplierModel) private readonly supplierRepository: typeof SupplierModel,
 	) {}
 
@@ -450,6 +456,128 @@ export class WarehouseService {
 		});
 
 		return new PageDto(imports.rows, new PageMetaDto({ itemCount: imports.count, pageOptionsDto: dto }));
+	}
+
+	async exportProducts(dto: ExportProductDto) {
+		const { products, staff_name, staff_id, export_date } = dto;
+		const warehouse = await this.getPrimaryWarehouse();
+		const warehouse_id = warehouse.id;
+
+		return await this.warehouseRepository.sequelize.transaction(async transaction => {
+			await this.reconcileSingleWarehouseInventory(transaction);
+			const exportResults = [];
+
+			for (const product of products) {
+				const { product_id, quantity, note } = product;
+
+				if (!Number.isInteger(quantity) || quantity <= 0) {
+					throw new BadRequestException(`Số lượng xuất của sản phẩm ${product_id} phải là số nguyên dương`);
+				}
+
+				const existingProduct = await this.productRepository.findOne({
+					where: { id: product_id },
+					transaction,
+					lock: transaction.LOCK.UPDATE,
+				});
+
+				if (!existingProduct) {
+					throw new NotFoundException(`Không tìm thấy sản phẩm với ID: ${product_id}`);
+				}
+
+				const productWarehouse = await this.productWarehouseRepository.findOne({
+					where: {
+						product_id,
+						warehouse_id,
+					},
+					transaction,
+					lock: transaction.LOCK.UPDATE,
+				});
+
+				if (!productWarehouse || Number(productWarehouse.quantity || 0) < quantity) {
+					throw new BadRequestException(
+						`Không đủ tồn kho để xuất sản phẩm ${existingProduct.name}. Còn lại: ${Number(
+							productWarehouse?.quantity || 0,
+						)}`,
+					);
+				}
+
+				await productWarehouse.decrement("quantity", { by: quantity, transaction });
+				await this.syncProductQuantityFromWarehouses(product_id, transaction);
+
+				await this.exportHistoryRepository.create(
+					{
+						product_id,
+						warehouse_id,
+						quantity,
+						staff_name,
+						staff_id,
+						export_date,
+						note,
+						status: WarehouseExportStatus.COMPLETED,
+					},
+					{ transaction },
+				);
+
+				exportResults.push({
+					product: existingProduct.name,
+					quantity,
+					note,
+					export_date,
+				});
+			}
+
+			return {
+				message: "Xuất kho thành công",
+				details: exportResults,
+			};
+		});
+	}
+
+	async getExportHistory(dto: SearchExportDto) {
+		const { warehouse_id, staff_name, from_date, to_date, take, skip } = dto;
+		const whereOptions: WhereOptions = {};
+		const dateConditions = [];
+
+		if (warehouse_id) {
+			whereOptions.warehouse_id = { [Op.eq]: warehouse_id };
+		}
+
+		if (staff_name) {
+			whereOptions.staff_name = { [Op.like]: `%${staff_name}%` };
+		}
+
+		if (from_date) {
+			dateConditions.push({
+				[Op.gte]: from_date,
+			});
+		}
+
+		if (to_date) {
+			dateConditions.push({ [Op.lte]: to_date });
+		}
+
+		if (dateConditions.length > 0) {
+			whereOptions.export_date = { [Op.and]: dateConditions };
+		}
+
+		const exports = await this.exportHistoryRepository.findAndCountAll({
+			where: whereOptions,
+			include: [
+				{
+					model: ProductModel,
+					attributes: ["id", "product_code", "name", "image"],
+				},
+				{
+					model: WarehouseModel,
+					attributes: ["id", "warehouse_code", "warehouse_name"],
+				},
+			],
+			order: [["export_date", "DESC"]],
+			limit: take,
+			offset: skip,
+		});
+
+		return new PageDto(exports.rows, new PageMetaDto({ itemCount: exports.count, pageOptionsDto: dto }));
 	}
 
 	async updateImportStatus(id: number, dto: UpdateImportStatusDto) {

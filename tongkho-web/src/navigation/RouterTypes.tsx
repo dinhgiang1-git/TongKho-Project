@@ -19,6 +19,7 @@ const AdminOrderPage = lazy(() => import('../features/admin/Order/OrderPage.tsx'
 const AdminEditOrder = lazy(() => import('../features/admin/Order/components/OrderDetail.tsx'))
 const WarehousePage = lazy(() => import('../features/admin/Warehouse/WarehousePage.tsx'))
 const ImportWarehousePage = lazy(() => import('../features/admin/ImportWarehouse/ImportWarehousePage.tsx'))
+const ExportWarehousePage = lazy(() => import('../features/admin/ExportWarehouse/ExportWarehousePage.tsx'))
 //User
 const HomePage = lazy(() => import('../features/customer/home/Home.tsx'))
 const UserLayout = lazy(() => import('../common/layout/UserLayout/userLayout.tsx'))
@@ -112,6 +113,11 @@ export const adminRoutes: Array<RouterProps> = [
   {
     path: ADMIN_PATH.IMPORT_WAREHOUSE,
     component: ImportWarehousePage,
+    layout: AdminLayout
+  },
+  {
+    path: ADMIN_PATH.EXPORT_WAREHOUSE,
+    component: ExportWarehousePage,
     layout: AdminLayout
   }
 ]

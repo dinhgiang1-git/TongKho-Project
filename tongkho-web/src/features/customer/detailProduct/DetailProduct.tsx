@@ -13,6 +13,7 @@ import LocalStorage from 'apis/localStorage'
 function DetailProductPage() {
   const [product, setProduct] = useState<any>({})
   const [selectedImage, setSelectedImage] = useState<string>('')
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
   const navigate = useNavigate()
   const [relatedProducts, setRelatedProducts] = useState<Array<any>>([])
   const [payload, setPayload] = useState<any>({
@@ -63,13 +64,14 @@ function DetailProductPage() {
   }
   const handleAddToCart = useCallback(
     async (payload: any) => {
+      if (isAddingToCart) return
+
       try {
+        setIsAddingToCart(true)
         if (!LocalStorage.getToken()) {
           const guestCart = LocalStorage.getGuestCart()
           const productNumber = Number(payload.product_number) || 1
-          const foundIndex = guestCart.findIndex(
-            (item: any) => item.product_id === payload.product_id
-          )
+          const foundIndex = guestCart.findIndex((item: any) => Number(item.product_id) === Number(payload.product_id))
 
           if (foundIndex >= 0) {
             const nextProductNumber = guestCart[foundIndex].product_number + productNumber
@@ -101,9 +103,11 @@ function DetailProductPage() {
         }
       } catch (error) {
         openNotificationError(error)
+      } finally {
+        setIsAddingToCart(false)
       }
     },
-    [product]
+    [isAddingToCart, product]
   )
 
   useEffect(() => {
@@ -127,7 +131,7 @@ function DetailProductPage() {
     if (payload.brand) {
       getProductsByCategory(payload)
     }
-  }, [payload])
+  }, [payload, getProductsByCategory])
 
   useEffect(() => {
     setCartPayload((prev: any) => ({
@@ -289,12 +293,12 @@ function DetailProductPage() {
                   <motion.button
                     whileHover={{ scale: product?.quantity > 0 ? 1.02 : 1, y: product?.quantity > 0 ? -1 : 0 }}
                     whileTap={{ scale: product?.quantity > 0 ? 0.98 : 1 }}
-                    onClick={() => product?.quantity > 0 && handleAddToCart(cartPayload)}
-                    disabled={!product?.quantity || product.quantity <= 0}
-                    className={`flex-1 mt-auto py-2.5 px-5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-md ${product?.quantity > 0 ? 'bg-primary hover:bg-hover text-white hover:shadow-lg' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                    onClick={() => product?.quantity > 0 && !isAddingToCart && handleAddToCart(cartPayload)}
+                    disabled={!product?.quantity || product.quantity <= 0 || isAddingToCart}
+                    className={`flex-1 mt-auto py-2.5 px-5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-md ${product?.quantity > 0 && !isAddingToCart ? 'bg-primary hover:bg-hover text-white hover:shadow-lg' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                   >
                     <ShoppingCart className='w-4 h-4' />
-                    Thêm vào giỏ hàng
+                    {isAddingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
                   </motion.button>
                 </div>
               </div>
